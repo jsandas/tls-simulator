@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -140,20 +141,49 @@ func main() {
 		fmt.Println("Handshake failed:", err)
 	}
 
-	serverHelloBytes, err := getServerHello(resp)
+	serverHelloBytes, serverKeyExchangeBytes, err := getHandshakeMessages(resp)
 	if err != nil {
-		fmt.Println("Failed to get ServerHello:", err)
+		fmt.Println("Failed to get handshake messages:", err)
 		return
 	}
 
 	serverHello := ftls.ServerHelloMsg{}
+	// Parse ServerHello if available
+	if serverHelloBytes != nil {
+		// serverHello := ftls.ServerHelloMsg{}
+		success := serverHello.Unmarshal(serverHelloBytes)
+		if !success {
+			fmt.Println("Failed to unmarshal ServerHello")
+			log.Panic()
+		}
+		// else {
+		// 	fmt.Printf("ServerHello:\n%+v\n", serverHello)
+		// }
+	}
 
-	// fmt.Println("Received response, length:", len(serverHelloBytes))
-	// fmt.Printf("bytes: %x\n", serverHelloBytes[:5])
-	b2 := serverHello.Unmarshal(serverHelloBytes) // Skip the TLS record header (first 5 bytes)
-	if !b2 {
-		fmt.Println("Failed to unmarshal ServerHello")
-		return
+	// Parse ServerKeyExchange if available
+	if serverKeyExchangeBytes != nil {
+		serverKeyExchange := ftls.ServerKeyExchangeMsg{}
+		b3 := serverKeyExchange.Unmarshal(serverKeyExchangeBytes)
+		if !b3 {
+			fmt.Println("Failed to unmarshal ServerKeyExchange")
+		} else {
+			fmt.Printf("ServerKeyExchange:\n%+v\n", serverKeyExchange)
+
+			// Parse the key exchange data to identify key type and size
+			keyType, keySize, curveID, err := parseServerKeyExchange(&serverKeyExchange)
+			if err != nil {
+				fmt.Printf("Failed to parse ServerKeyExchange: %v\n", err)
+			} else {
+				serverHello.ServerShare.Group = curveID
+				fmt.Printf("Key Analysis:\n")
+				fmt.Printf("  Type: %s\n", keyType)
+				fmt.Printf("  Size: %d bytes\n", keySize)
+				if curveID != 0 {
+					fmt.Printf("  Curve ID: 0x%04x\n", curveID)
+				}
+			}
+		}
 	}
 
 	fmt.Printf("ServerHello:\n%+v\n", serverHello)
@@ -172,29 +202,38 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Read the response (first record)
+	// Read all available response data
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-	resp := make([]byte, 4096)
-	n, err := conn.Read(resp)
-	if err != nil {
-		return nil, err
+	var resp []byte
+	buffer := make([]byte, 4096)
+
+	for {
+		n, err := conn.Read(buffer)
+		if err != nil {
+			if n > 0 {
+				resp = append(resp, buffer[:n]...)
+			}
+			break
+		}
+		resp = append(resp, buffer[:n]...)
 	}
 
-	// Parse ServerHello
-	return resp[:n], nil
+	return resp, nil
 }
 
-func getServerHello(data []byte) ([]byte, error) {
+func getHandshakeMessages(data []byte) (serverHello []byte, serverKeyExchange []byte, err error) {
 	i := 0
 	for i+5 <= len(data) {
 		// Parse TLS record header
 		contentType := data[i]
-		// version := binary.BigEndian.Uint16(data[i+1 : i+3])
+		version := binary.BigEndian.Uint16(data[i+1 : i+3])
 		length := int(binary.BigEndian.Uint16(data[i+3 : i+5]))
 		if i+5+length > len(data) {
 			break // Malformed record
 		}
 		recordPayload := data[i+5 : i+5+length]
+		fmt.Printf("TLS Record: type=0x%02x, version=0x%04x, length=%d\n", contentType, version, length)
+
 		if contentType == 0x16 { // Handshake
 			// Parse handshake messages within this record
 			j := 0
@@ -204,14 +243,72 @@ func getServerHello(data []byte) ([]byte, error) {
 				if j+4+handshakeLen > len(recordPayload) {
 					break // Malformed handshake message
 				}
-				if handshakeType == ftls.TypeServerHello { // ServerHello
-					// Return the full handshake message (header + body)
-					return recordPayload[j : j+4+handshakeLen], nil
+				handshakeMessage := recordPayload[j : j+4+handshakeLen]
+
+				fmt.Printf("  Handshake message: type=0x%02x, length=%d\n", handshakeType, handshakeLen)
+
+				switch handshakeType {
+				case ftls.TypeServerHello:
+					if serverHello == nil {
+						serverHello = handshakeMessage
+						fmt.Printf("    Found ServerHello\n")
+					}
+				case ftls.TypeServerKeyExchange:
+					if serverKeyExchange == nil {
+						serverKeyExchange = handshakeMessage
+						fmt.Printf("    Found ServerKeyExchange\n")
+					}
+				case ftls.TypeCertificate:
+					fmt.Printf("    Found Certificate\n")
+				case ftls.TypeServerHelloDone:
+					fmt.Printf("    Found ServerHelloDone\n")
+				default:
+					fmt.Printf("    Found other handshake message type: 0x%02x\n", handshakeType)
 				}
 				j += 4 + handshakeLen
 			}
 		}
 		i += 5 + length
 	}
-	return nil, fmt.Errorf("ServerHello not found in response")
+
+	if serverHello == nil && serverKeyExchange == nil {
+		return nil, nil, fmt.Errorf("no ServerHello or ServerKeyExchange found in response")
+	}
+
+	return serverHello, serverKeyExchange, nil
+}
+
+// parseServerKeyExchange parses the ServerKeyExchange message to identify key type and size
+func parseServerKeyExchange(skx *ftls.ServerKeyExchangeMsg) (keyType string, keySize int, curveID ftls.CurveID, err error) {
+	key := skx.GetKey()
+	if len(key) < 4 {
+		return "", 0, 0, fmt.Errorf("ServerKeyExchange too short")
+	}
+
+	// Check if this is a named curve (ECDHE)
+	if key[0] == 3 { // named curve
+		curveID = ftls.CurveID(key[1])<<8 | ftls.CurveID(key[2])
+		publicLen := int(key[3])
+
+		if publicLen+4 > len(key) {
+			return "", 0, 0, fmt.Errorf("invalid public key length in ServerKeyExchange")
+		}
+
+		// Get the curve name and key size
+		switch curveID {
+		case ftls.X25519:
+			return "X25519", 32, curveID, nil
+		case ftls.CurveP256:
+			return "P-256", 32, curveID, nil
+		case ftls.CurveP384:
+			return "P-384", 48, curveID, nil
+		case ftls.CurveP521:
+			return "P-521", 66, curveID, nil
+		default:
+			return fmt.Sprintf("Unknown Curve (0x%04x)", curveID), publicLen, curveID, nil
+		}
+	}
+
+	// For other key exchange types (DHE, etc.)
+	return "Unknown", len(key), 0, nil
 }

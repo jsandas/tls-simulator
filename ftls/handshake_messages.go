@@ -799,7 +799,7 @@ func (m *ServerHelloMsg) Unmarshal(data []byte) bool {
 	*m = ServerHelloMsg{Original: data}
 	s := cryptobyte.String(data)
 
-	fmt.Printf("Unmarshalling ServerHello: \n%x\n\n", data)
+	// fmt.Printf("Unmarshalling ServerHello: \n%x\n\n", data)
 	if !s.Skip(4) || // message type and uint24 length field
 		!s.ReadUint16(&m.Vers) || !s.ReadBytes(&m.Random, 32) ||
 		!readUint8LengthPrefixed(&s, &m.SessionId) ||
@@ -926,40 +926,8 @@ func (m *ServerHelloMsg) Unmarshal(data []byte) bool {
 	return true
 }
 
-// func (m *ServerHelloMsg) originalBytes() []byte {
-// 	return m.Original
-// }
-
-// type transcriptHash interface {
-// 	Write([]byte) (int, error)
-// }
-
-type ClientKeyExchangeMsg struct {
-	ciphertext []byte
-}
-
-func (m *ClientKeyExchangeMsg) Marshal() ([]byte, error) {
-	length := len(m.ciphertext)
-	x := make([]byte, length+4)
-	x[0] = TypeClientKeyExchange
-	x[1] = uint8(length >> 16)
-	x[2] = uint8(length >> 8)
-	x[3] = uint8(length)
-	copy(x[4:], m.ciphertext)
-
-	return x, nil
-}
-
-func (m *ClientKeyExchangeMsg) Unmarshal(data []byte) bool {
-	if len(data) < 4 {
-		return false
-	}
-	l := int(data[1])<<16 | int(data[2])<<8 | int(data[3])
-	if l != len(data)-4 {
-		return false
-	}
-	m.ciphertext = data[4:]
-	return true
+func (m *ServerHelloMsg) OriginalBytes() []byte {
+	return m.Original
 }
 
 type FinishedMsg struct {
@@ -981,4 +949,33 @@ func (m *FinishedMsg) Unmarshal(data []byte) bool {
 	return s.Skip(1) &&
 		readUint24LengthPrefixed(&s, &m.verifyData) &&
 		s.Empty()
+}
+
+type ServerKeyExchangeMsg struct {
+	key []byte
+}
+
+func (m *ServerKeyExchangeMsg) Marshal() ([]byte, error) {
+	length := len(m.key)
+	x := make([]byte, length+4)
+	x[0] = TypeServerKeyExchange
+	x[1] = uint8(length >> 16)
+	x[2] = uint8(length >> 8)
+	x[3] = uint8(length)
+	copy(x[4:], m.key)
+
+	return x, nil
+}
+
+func (m *ServerKeyExchangeMsg) Unmarshal(data []byte) bool {
+	if len(data) < 4 {
+		return false
+	}
+	m.key = data[4:]
+	return true
+}
+
+// GetKey returns the key exchange data
+func (m *ServerKeyExchangeMsg) GetKey() []byte {
+	return m.key
 }
