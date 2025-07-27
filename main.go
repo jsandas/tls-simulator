@@ -176,6 +176,7 @@ func main() {
 				fmt.Printf("Failed to parse ServerKeyExchange: %v\n", err)
 			} else {
 				serverHello.ServerShare.Group = curveID
+				serverHello.ServerShare.Name = keyType
 				fmt.Printf("Key Analysis:\n")
 				fmt.Printf("  Type: %s\n", keyType)
 				fmt.Printf("  Size: %d bytes\n", keySize)
@@ -309,6 +310,55 @@ func parseServerKeyExchange(skx *ftls.ServerKeyExchangeMsg) (keyType string, key
 		}
 	}
 
-	// For other key exchange types (DHE, etc.)
+	// Check if this is DH key exchange (not ECDHE)
+	// DH ServerKeyExchange format: dh_p<1..2^16-1> + dh_g<1..2^16-1> + dh_Ys<1..2^16-1> + signature
+	if len(key) >= 6 {
+		// Parse dh_p length (first 2 bytes)
+		dhPLen := int(key[0])<<8 | int(key[1])
+		if dhPLen > 0 && dhPLen+2 <= len(key) {
+			// Extract dh_p (prime modulus)
+			dhP := key[2 : 2+dhPLen]
+
+			// Identify common DH groups by their prime size and specific values
+			switch len(dhP) {
+			case 128: // 1024 bits
+				return "DH-1024", 128, 0, nil
+			case 256: // 2048 bits
+				// Check for RFC 7919 ffdhe2048 group
+				if len(dhP) >= 4 && dhP[0] == 0xff && dhP[1] == 0xff && dhP[2] == 0xff && dhP[3] == 0xff {
+					return "ffdhe2048 (RFC 7919)", 256, 0, nil
+				}
+				return "DH-2048", 256, 0, nil
+			case 384: // 3072 bits
+				// Check for RFC 7919 ffdhe3072 group
+				if len(dhP) >= 4 && dhP[0] == 0xff && dhP[1] == 0xff && dhP[2] == 0xff && dhP[3] == 0xff {
+					return "ffdhe3072 (RFC 7919)", 384, 0, nil
+				}
+				return "DH-3072", 384, 0, nil
+			case 512: // 4096 bits
+				// Check for RFC 7919 ffdhe4096 group
+				if len(dhP) >= 4 && dhP[0] == 0xff && dhP[1] == 0xff && dhP[2] == 0xff && dhP[3] == 0xff {
+					return "ffdhe4096 (RFC 7919)", 512, 0, nil
+				}
+				return "DH-4096", 512, 0, nil
+			case 768: // 6144 bits
+				// Check for RFC 7919 ffdhe6144 group
+				if len(dhP) >= 4 && dhP[0] == 0xff && dhP[1] == 0xff && dhP[2] == 0xff && dhP[3] == 0xff {
+					return "ffdhe6144 (RFC 7919)", 768, 0, nil
+				}
+				return "DH-6144", 768, 0, nil
+			case 1024: // 8192 bits
+				// Check for RFC 7919 ffdhe8192 group
+				if len(dhP) >= 4 && dhP[0] == 0xff && dhP[1] == 0xff && dhP[2] == 0xff && dhP[3] == 0xff {
+					return "ffdhe8192 (RFC 7919)", 1024, 0, nil
+				}
+				return "DH-8192", 1024, 0, nil
+			default:
+				return fmt.Sprintf("DH-%d", len(dhP)*8), len(dhP), 0, nil
+			}
+		}
+	}
+
+	// For other key exchange types
 	return "Unknown", len(key), 0, nil
 }

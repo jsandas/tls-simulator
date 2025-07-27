@@ -641,6 +641,7 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 type KeyShare struct {
 	Group CurveID
 	Data  []byte
+	Name  string
 }
 
 type ServerHelloMsg struct {
