@@ -69,6 +69,12 @@ const (
 	CurveP384      CurveID = 24
 	CurveP521      CurveID = 25
 	X25519         CurveID = 29
+	DH1024         CurveID = 255 // 1024-bit not in RFC 7919
+	DH2048         CurveID = 256 // 2048-bit ffdhe2048, RFC 7919
+	DH3072         CurveID = 257 // 3072-bit ffdhe3072, RFC 7919
+	DH4096         CurveID = 258 // 4096-bit ffdhe4096, RFC 7919
+	DH6144         CurveID = 259 // 6144-bit ffdhe6144, RFC 7919
+	DH8192         CurveID = 260 // 8192-bit ffdhe8192, RFC 7919
 	X25519MLKEM768 CurveID = 4588
 )
 

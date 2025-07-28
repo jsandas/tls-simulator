@@ -92,12 +92,14 @@ func main() {
 	}
 
 	clientMsg := ftls.ClientHelloMsg{
-		Vers:               tls.VersionTLS12,
+		Vers:               tls.VersionTLS13,
 		CipherSuites:       ciphers,
 		CompressionMethods: []uint8{ftls.CompressionNone},
 		ServerName:         "localhost",
 		SessionId:          []byte{},
-		Random:             []byte{0x3a, 0x6e, 0x72, 0xcc, 0xf9, 0x3b, 0x29, 0xbb, 0xfb, 0x2d, 0xd0, 0xa3, 0x2b, 0x76, 0x3a, 0x9d, 0x28, 0x89, 0x11, 0xae, 0xfe, 0x4f, 0xf, 0x37, 0x6d, 0xce, 0xa0, 0x4a, 0xf, 0x8d, 0x6e, 0x15},
+		Random: []byte{0x3a, 0x6e, 0x72, 0xcc, 0xf9, 0x3b, 0x29, 0xbb, 0xfb, 0x2d, 0xd0, 0xa3,
+			0x2b, 0x76, 0x3a, 0x9d, 0x28, 0x89, 0x11, 0xae, 0xfe, 0x4f, 0xf, 0x37, 0x6d,
+			0xce, 0xa0, 0x4a, 0xf, 0x8d, 0x6e, 0x15},
 		// SupportedVersions:  []uint16{tls.VersionTLS13, tls.VersionTLS12, tls.VersionTLS11, tls.VersionTLS10},
 		SupportedPoints: []uint8{ftls.PointFormatUncompressed},
 		SupportedCurves: []ftls.CurveID{ftls.X25519, ftls.CurveP256, ftls.CurveP384, ftls.CurveP521},
@@ -168,20 +170,21 @@ func main() {
 		if !b3 {
 			fmt.Println("Failed to unmarshal ServerKeyExchange")
 		} else {
-			fmt.Printf("ServerKeyExchange:\n%+v\n", serverKeyExchange)
+			// fmt.Printf("ServerKeyExchange:\n%+v\n", serverKeyExchange)
 
 			// Parse the key exchange data to identify key type and size
-			keyType, keySize, curveID, err := parseServerKeyExchange(&serverKeyExchange)
+			err := serverKeyExchange.GetKey()
 			if err != nil {
 				fmt.Printf("Failed to parse ServerKeyExchange: %v\n", err)
 			} else {
-				serverHello.ServerShare.Group = curveID
-				serverHello.ServerShare.Name = keyType
+				serverHello.ServerShare.Group = serverKeyExchange.CurveID
+				serverHello.ServerShare.Name = serverKeyExchange.KeyType
+				// serverHello.ServerShare.Data = serverKeyExchange.Key
 				fmt.Printf("Key Analysis:\n")
-				fmt.Printf("  Type: %s\n", keyType)
-				fmt.Printf("  Size: %d bytes\n", keySize)
-				if curveID != 0 {
-					fmt.Printf("  Curve ID: 0x%04x\n", curveID)
+				fmt.Printf("  Type: %s\n", serverKeyExchange.KeyType)
+				fmt.Printf("  Size: %d bytes\n", serverKeyExchange.KeySize)
+				if serverHello.ServerShare.Group != 0 {
+					fmt.Printf("  Curve ID: 0x%04x\n", serverHello.ServerShare.Group)
 				}
 			}
 		}
@@ -277,88 +280,4 @@ func getHandshakeMessages(data []byte) (serverHello []byte, serverKeyExchange []
 	}
 
 	return serverHello, serverKeyExchange, nil
-}
-
-// parseServerKeyExchange parses the ServerKeyExchange message to identify key type and size
-func parseServerKeyExchange(skx *ftls.ServerKeyExchangeMsg) (keyType string, keySize int, curveID ftls.CurveID, err error) {
-	key := skx.GetKey()
-	if len(key) < 4 {
-		return "", 0, 0, fmt.Errorf("ServerKeyExchange too short")
-	}
-
-	// Check if this is a named curve (ECDHE)
-	if key[0] == 3 { // named curve
-		curveID = ftls.CurveID(key[1])<<8 | ftls.CurveID(key[2])
-		publicLen := int(key[3])
-
-		if publicLen+4 > len(key) {
-			return "", 0, 0, fmt.Errorf("invalid public key length in ServerKeyExchange")
-		}
-
-		// Get the curve name and key size
-		switch curveID {
-		case ftls.X25519:
-			return "X25519", 32, curveID, nil
-		case ftls.CurveP256:
-			return "P-256", 32, curveID, nil
-		case ftls.CurveP384:
-			return "P-384", 48, curveID, nil
-		case ftls.CurveP521:
-			return "P-521", 66, curveID, nil
-		default:
-			return fmt.Sprintf("Unknown Curve (0x%04x)", curveID), publicLen, curveID, nil
-		}
-	}
-
-	// Check if this is DH key exchange (not ECDHE)
-	// DH ServerKeyExchange format: dh_p<1..2^16-1> + dh_g<1..2^16-1> + dh_Ys<1..2^16-1> + signature
-	if len(key) >= 6 {
-		// Parse dh_p length (first 2 bytes)
-		dhPLen := int(key[0])<<8 | int(key[1])
-		if dhPLen > 0 && dhPLen+2 <= len(key) {
-			// Extract dh_p (prime modulus)
-			dhP := key[2 : 2+dhPLen]
-
-			// Identify common DH groups by their prime size and specific values
-			switch len(dhP) {
-			case 128: // 1024 bits
-				return "DH-1024", 128, 0, nil
-			case 256: // 2048 bits
-				// Check for RFC 7919 ffdhe2048 group
-				if len(dhP) >= 4 && dhP[0] == 0xff && dhP[1] == 0xff && dhP[2] == 0xff && dhP[3] == 0xff {
-					return "ffdhe2048 (RFC 7919)", 256, 0, nil
-				}
-				return "DH-2048", 256, 0, nil
-			case 384: // 3072 bits
-				// Check for RFC 7919 ffdhe3072 group
-				if len(dhP) >= 4 && dhP[0] == 0xff && dhP[1] == 0xff && dhP[2] == 0xff && dhP[3] == 0xff {
-					return "ffdhe3072 (RFC 7919)", 384, 0, nil
-				}
-				return "DH-3072", 384, 0, nil
-			case 512: // 4096 bits
-				// Check for RFC 7919 ffdhe4096 group
-				if len(dhP) >= 4 && dhP[0] == 0xff && dhP[1] == 0xff && dhP[2] == 0xff && dhP[3] == 0xff {
-					return "ffdhe4096 (RFC 7919)", 512, 0, nil
-				}
-				return "DH-4096", 512, 0, nil
-			case 768: // 6144 bits
-				// Check for RFC 7919 ffdhe6144 group
-				if len(dhP) >= 4 && dhP[0] == 0xff && dhP[1] == 0xff && dhP[2] == 0xff && dhP[3] == 0xff {
-					return "ffdhe6144 (RFC 7919)", 768, 0, nil
-				}
-				return "DH-6144", 768, 0, nil
-			case 1024: // 8192 bits
-				// Check for RFC 7919 ffdhe8192 group
-				if len(dhP) >= 4 && dhP[0] == 0xff && dhP[1] == 0xff && dhP[2] == 0xff && dhP[3] == 0xff {
-					return "ffdhe8192 (RFC 7919)", 1024, 0, nil
-				}
-				return "DH-8192", 1024, 0, nil
-			default:
-				return fmt.Sprintf("DH-%d", len(dhP)*8), len(dhP), 0, nil
-			}
-		}
-	}
-
-	// For other key exchange types
-	return "Unknown", len(key), 0, nil
 }

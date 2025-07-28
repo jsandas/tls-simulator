@@ -953,17 +953,20 @@ func (m *FinishedMsg) Unmarshal(data []byte) bool {
 }
 
 type ServerKeyExchangeMsg struct {
-	key []byte
+	Key     []byte
+	KeySize int
+	KeyType string
+	CurveID CurveID
 }
 
 func (m *ServerKeyExchangeMsg) Marshal() ([]byte, error) {
-	length := len(m.key)
+	length := len(m.Key)
 	x := make([]byte, length+4)
 	x[0] = TypeServerKeyExchange
 	x[1] = uint8(length >> 16)
 	x[2] = uint8(length >> 8)
 	x[3] = uint8(length)
-	copy(x[4:], m.key)
+	copy(x[4:], m.Key)
 
 	return x, nil
 }
@@ -972,11 +975,80 @@ func (m *ServerKeyExchangeMsg) Unmarshal(data []byte) bool {
 	if len(data) < 4 {
 		return false
 	}
-	m.key = data[4:]
+	m.Key = data[4:]
 	return true
 }
 
 // GetKey returns the key exchange data
-func (m *ServerKeyExchangeMsg) GetKey() []byte {
-	return m.key
+func (m *ServerKeyExchangeMsg) GetKey() error {
+	key := m.Key
+	if len(key) < 4 {
+		return fmt.Errorf("ServerKeyExchange too short")
+	}
+
+	// Check if this is a named curve (ECDHE)
+	if key[0] == 3 { // named curve
+		curveID := CurveID(key[1])<<8 | CurveID(key[2])
+		publicLen := int(key[3])
+
+		if publicLen+4 > len(key) {
+			return fmt.Errorf("invalid public key length in ServerKeyExchange")
+		}
+
+		// Get the curve name and key size
+		switch curveID {
+		case X25519:
+			m.KeyType, m.KeySize, m.CurveID = "X25519", 32, curveID
+			return nil
+		case CurveP256:
+			m.KeyType, m.KeySize, m.CurveID = "P-256", 32, curveID
+			return nil
+		case CurveP384:
+			m.KeyType, m.KeySize, m.CurveID = "P-384", 48, curveID
+			return nil
+		case CurveP521:
+			m.KeyType, m.KeySize, m.CurveID = "P-521", 66, curveID
+			return nil
+		default:
+			return fmt.Errorf("unknown curve (0x%04x)", curveID)
+		}
+	}
+
+	// Check if this is DH key exchange (not ECDHE)
+	// DH ServerKeyExchange format: dh_p<1..2^16-1> + dh_g<1..2^16-1> + dh_Ys<1..2^16-1> + signature
+	if len(key) >= 6 {
+		// Parse dh_p length (first 2 bytes)
+		dhPLen := int(key[0])<<8 | int(key[1])
+		if dhPLen > 0 && dhPLen+2 <= len(key) {
+			// Extract dh_p (prime modulus)
+			dhP := key[2 : 2+dhPLen]
+
+			// Identify common DH groups by their prime size and specific values
+			switch len(dhP) {
+			case 128: // 1024 bits
+				m.KeyType, m.KeySize, m.CurveID = "DH-1024", 128, DH1024
+				return nil
+			case 256: // 2048 bits
+				m.KeyType, m.KeySize, m.CurveID = "DH-2048", 256, DH2048
+				return nil
+			case 384: // 3072 bits
+				m.KeyType, m.KeySize, m.CurveID = "DH-3072", 384, DH3072
+				return nil
+			case 512: // 4096 bits
+				m.KeyType, m.KeySize, m.CurveID = "DH-4096", 512, DH4096
+				return nil
+			case 768: // 6144 bits
+				m.KeyType, m.KeySize, m.CurveID = "DH-6144", 768, DH6144
+				return nil
+			case 1024: // 8192 bits
+				m.KeyType, m.KeySize, m.CurveID = "DH-8192", 1024, DH8192
+				return nil
+			default:
+				return fmt.Errorf("DH-%d", len(dhP)*8)
+			}
+		}
+	}
+
+	// For other key exchange types
+	return fmt.Errorf("unknown key exchange type in ServerKeyExchange: %s", m.KeyType)
 }
