@@ -637,13 +637,6 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 	return true
 }
 
-// TLS 1.3 Key Share. See RFC 8446, Section 4.2.8.
-type KeyShare struct {
-	Group CurveID
-	Data  []byte
-	Name  string
-}
-
 type ServerHelloMsg struct {
 	Original                     []byte
 	Vers                         uint16
@@ -931,27 +924,6 @@ func (m *ServerHelloMsg) OriginalBytes() []byte {
 	return m.Original
 }
 
-type FinishedMsg struct {
-	verifyData []byte
-}
-
-func (m *FinishedMsg) Marshal() ([]byte, error) {
-	var b cryptobyte.Builder
-	b.AddUint8(TypeFinished)
-	b.AddUint24LengthPrefixed(func(b *cryptobyte.Builder) {
-		b.AddBytes(m.verifyData)
-	})
-
-	return b.Bytes()
-}
-
-func (m *FinishedMsg) Unmarshal(data []byte) bool {
-	s := cryptobyte.String(data)
-	return s.Skip(1) &&
-		readUint24LengthPrefixed(&s, &m.verifyData) &&
-		s.Empty()
-}
-
 type ServerKeyExchangeMsg struct {
 	Key     []byte
 	KeySize int
@@ -1051,4 +1023,25 @@ func (m *ServerKeyExchangeMsg) GetKey() error {
 
 	// For other key exchange types
 	return fmt.Errorf("unknown key exchange type in ServerKeyExchange: %s", m.KeyType)
+}
+
+type FinishedMsg struct {
+	verifyData []byte
+}
+
+func (m *FinishedMsg) Marshal() ([]byte, error) {
+	var b cryptobyte.Builder
+	b.AddUint8(TypeFinished)
+	b.AddUint24LengthPrefixed(func(b *cryptobyte.Builder) {
+		b.AddBytes(m.verifyData)
+	})
+
+	return b.Bytes()
+}
+
+func (m *FinishedMsg) Unmarshal(data []byte) bool {
+	s := cryptobyte.String(data)
+	return s.Skip(1) &&
+		readUint24LengthPrefixed(&s, &m.verifyData) &&
+		s.Empty()
 }

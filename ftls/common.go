@@ -78,6 +78,13 @@ const (
 	X25519MLKEM768 CurveID = 4588
 )
 
+// TLS 1.3 Key Share. See RFC 8446, Section 4.2.8.
+type KeyShare struct {
+	Group CurveID
+	Data  []byte
+	Name  string
+}
+
 // TLS 1.3 PSK Identity. Can be a Session Ticket, or a reference to a saved
 // session. See RFC 8446, Section 4.2.11.
 type PskIdentity struct {
