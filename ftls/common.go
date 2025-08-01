@@ -132,8 +132,3 @@ const (
 	PKCS1WithSHA1 SignatureScheme = 0x0201
 	ECDSAWithSHA1 SignatureScheme = 0x0203
 )
-
-// type HandshakeMessage interface {
-// 	Marshal() ([]byte, error)
-// 	Unmarshal([]byte) bool
-// }
