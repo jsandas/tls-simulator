@@ -356,13 +356,11 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 	if !s.Skip(4) || // message type and uint24 length field
 		!s.ReadUint16(&m.Vers) || !s.ReadBytes(&m.Random, 32) ||
 		!readUint8LengthPrefixed(&s, &m.SessionId) {
-		fmt.Println("Failed to read ClientHello header")
 		return false
 	}
 
 	var cipherSuites cryptobyte.String
 	if !s.ReadUint16LengthPrefixed(&cipherSuites) {
-		fmt.Println("Failed to read ClientHello cipher suites")
 		return false
 	}
 	m.CipherSuites = []uint16{}
@@ -370,7 +368,6 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 	for !cipherSuites.Empty() {
 		var suite uint16
 		if !cipherSuites.ReadUint16(&suite) {
-			fmt.Println("Failed to read ClientHello cipher suite")
 			return false
 		}
 		if suite == scsvRenegotiation {
@@ -380,7 +377,6 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 	}
 
 	if !readUint8LengthPrefixed(&s, &m.CompressionMethods) {
-		fmt.Println("Failed to read ClientHello compression methods")
 		return false
 	}
 
@@ -391,7 +387,6 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 
 	var extensions cryptobyte.String
 	if !s.ReadUint16LengthPrefixed(&extensions) || !s.Empty() {
-		fmt.Println("Failed to read ClientHello extensions")
 		return false
 	}
 
@@ -401,12 +396,10 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 		var extData cryptobyte.String
 		if !extensions.ReadUint16(&extension) ||
 			!extensions.ReadUint16LengthPrefixed(&extData) {
-			fmt.Println("Failed to read ClientHello extension")
 			return false
 		}
 
 		if seenExts[extension] {
-			fmt.Println("Duplicate ClientHello extension:", extension)
 			return false
 		}
 		seenExts[extension] = true
@@ -417,7 +410,6 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 			// RFC 6066, Section 3
 			var nameList cryptobyte.String
 			if !extData.ReadUint16LengthPrefixed(&nameList) || nameList.Empty() {
-				fmt.Println("Failed to read ClientHello server name")
 				return false
 			}
 			for !nameList.Empty() {
@@ -426,7 +418,6 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 				if !nameList.ReadUint8(&nameType) ||
 					!nameList.ReadUint16LengthPrefixed(&serverName) ||
 					serverName.Empty() {
-					fmt.Println("Failed to read ClientHello server name")
 					return false
 				}
 				if nameType != 0 {
@@ -434,13 +425,11 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 				}
 				if len(m.ServerName) != 0 {
 					// Multiple names of the same name_type are prohibited.
-					fmt.Println("Multiple server names in ClientHello")
 					return false
 				}
 				m.ServerName = string(serverName)
 				// An SNI value may not include a trailing dot.
 				if strings.HasSuffix(m.ServerName, ".") {
-					fmt.Println("Server name in ClientHello has trailing dot")
 					return false
 				}
 			}
@@ -451,7 +440,6 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 			if !extData.ReadUint8(&statusType) ||
 				!extData.ReadUint16LengthPrefixed(&ignored) ||
 				!extData.ReadUint16LengthPrefixed(&ignored) {
-				fmt.Println("Failed to read ClientHello status request")
 				return false
 			}
 			m.OcspStapling = statusType == StatusTypeOCSP
@@ -459,13 +447,11 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 			// RFC 4492, sections 5.1.1 and RFC 8446, Section 4.2.7
 			var curves cryptobyte.String
 			if !extData.ReadUint16LengthPrefixed(&curves) || curves.Empty() {
-				fmt.Println("Failed to read ClientHello supported curves")
 				return false
 			}
 			for !curves.Empty() {
 				var curve uint16
 				if !curves.ReadUint16(&curve) {
-					fmt.Println("Failed to read ClientHello supported curve")
 					return false
 				}
 				m.SupportedCurves = append(m.SupportedCurves, CurveID(curve))
@@ -474,7 +460,6 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 			// RFC 4492, Section 5.1.2
 			if !readUint8LengthPrefixed(&extData, &m.SupportedPoints) ||
 				len(m.SupportedPoints) == 0 {
-				fmt.Println("Failed to read ClientHello supported points")
 				return false
 			}
 		case ExtensionSessionTicket:
@@ -485,13 +470,11 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 			// RFC 5246, Section 7.4.1.4.1
 			var sigAndAlgs cryptobyte.String
 			if !extData.ReadUint16LengthPrefixed(&sigAndAlgs) || sigAndAlgs.Empty() {
-				fmt.Println("Failed to read ClientHello signature algorithms")
 				return false
 			}
 			for !sigAndAlgs.Empty() {
 				var sigAndAlg uint16
 				if !sigAndAlgs.ReadUint16(&sigAndAlg) {
-					fmt.Println("Failed to read ClientHello signature algorithm")
 					return false
 				}
 				m.SupportedSignatureAlgorithms = append(
@@ -501,13 +484,11 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 			// RFC 8446, Section 4.2.3
 			var sigAndAlgs cryptobyte.String
 			if !extData.ReadUint16LengthPrefixed(&sigAndAlgs) || sigAndAlgs.Empty() {
-				fmt.Println("Failed to read ClientHello signature algorithms cert")
 				return false
 			}
 			for !sigAndAlgs.Empty() {
 				var sigAndAlg uint16
 				if !sigAndAlgs.ReadUint16(&sigAndAlg) {
-					fmt.Println("Failed to read ClientHello signature algorithm cert")
 					return false
 				}
 				m.SupportedSignatureAlgorithmsCert = append(
@@ -516,7 +497,6 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 		case ExtensionRenegotiationInfo:
 			// RFC 5746, Section 3.2
 			if !readUint8LengthPrefixed(&extData, &m.SecureRenegotiation) {
-				fmt.Println("Failed to read ClientHello secure renegotiation info")
 				return false
 			}
 			m.SecureRenegotiationSupported = true
@@ -527,13 +507,11 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 			// RFC 7301, Section 3.1
 			var protoList cryptobyte.String
 			if !extData.ReadUint16LengthPrefixed(&protoList) || protoList.Empty() {
-				fmt.Println("Failed to read ClientHello ALPN protocols")
 				return false
 			}
 			for !protoList.Empty() {
 				var proto cryptobyte.String
 				if !protoList.ReadUint8LengthPrefixed(&proto) || proto.Empty() {
-					fmt.Println("Failed to read ClientHello ALPN protocol")
 					return false
 				}
 				m.AlpnProtocols = append(m.AlpnProtocols, string(proto))
@@ -545,13 +523,11 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 			// RFC 8446, Section 4.2.1
 			var versList cryptobyte.String
 			if !extData.ReadUint8LengthPrefixed(&versList) || versList.Empty() {
-				fmt.Println("Failed to read ClientHello supported versions")
 				return false
 			}
 			for !versList.Empty() {
 				var vers uint16
 				if !versList.ReadUint16(&vers) {
-					fmt.Println("Failed to read ClientHello supported version")
 					return false
 				}
 				m.SupportedVersions = append(m.SupportedVersions, vers)
@@ -809,7 +785,6 @@ func (m *ServerHelloMsg) Unmarshal(data []byte) bool {
 
 	var extensions cryptobyte.String
 	if !s.ReadUint16LengthPrefixed(&extensions) || !s.Empty() {
-		fmt.Println("Failed to read ServerHello extensions")
 		return false
 	}
 
@@ -819,7 +794,6 @@ func (m *ServerHelloMsg) Unmarshal(data []byte) bool {
 		var extData cryptobyte.String
 		if !extensions.ReadUint16(&extension) ||
 			!extensions.ReadUint16LengthPrefixed(&extData) {
-			fmt.Println("Failed to read ServerHello extension")
 			return false
 		}
 
