@@ -4,105 +4,80 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"net"
 	"time"
 
 	"github.com/jsandas/tls-simulator/ftls"
 )
 
-const (
-	TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384     = uint16(49192)
-	TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384   = uint16(49188)
-	TLS_DHE_RSA_WITH_AES_256_GCM_SHA384       = uint16(159)
-	TLS_DHE_RSA_WITH_AES_256_CBC_SHA256       = uint16(107)
-	TLS_DHE_RSA_WITH_AES_256_CBC_SHA          = uint16(57)
-	TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256 = uint16(52394)
-	TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA256  = uint16(196)
-	TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA     = uint16(136)
-	TLS_GOSTR341001_WITH_28147_CNT_IMIT       = uint16(129)
-	TLS_RSA_WITH_AES_256_CBC_SHA256           = uint16(61)
-	TLS_RSA_WITH_CAMELLIA_256_CBC_SHA256      = uint16(192)
-	TLS_RSA_WITH_CAMELLIA_256_CBC_SHA         = uint16(132)
-	TLS_DHE_RSA_WITH_AES_128_GCM_SHA256       = uint16(158)
-	TLS_DHE_RSA_WITH_AES_128_CBC_SHA256       = uint16(103)
-	TLS_DHE_RSA_WITH_AES_128_CBC_SHA          = uint16(51)
-	TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA256  = uint16(190)
-	TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA     = uint16(69)
-	TLS_RSA_WITH_CAMELLIA_128_CBC_SHA256      = uint16(186)
-	TLS_RSA_WITH_CAMELLIA_128_CBC_SHA         = uint16(65)
-	TLS_RSA_WITH_RC4_128_MD5                  = uint16(4)
-	TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA     = uint16(49160)
-	TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA         = uint16(22)
-	TLS_EMPTY_RENEGOTIATION_INFO_SCSV         = uint16(255)
-)
+var defaultCiphers = []uint16{
+	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+	tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+	tls.TLS_AES_256_GCM_SHA384,
+	tls.TLS_CHACHA20_POLY1305_SHA256,
+	tls.TLS_AES_128_GCM_SHA256,
+	tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+	tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+	tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+	tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+	tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+	tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+	tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+	tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+	tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+	tls.TLS_RSA_WITH_RC4_128_SHA,
+}
+var defaultCurves = []ftls.CurveID{
+	ftls.X25519,
+	ftls.CurveP521,
+	ftls.CurveP384,
+	ftls.CurveP256}
 
-func main() {
+// TLSHandshakeResult contains the parsed ServerHello and key exchange information
+type TLSHandshakeResult struct {
+	ServerHello *ftls.ServerHelloMsg
+	KeyType     string
+	KeySize     int
+	CurveID     ftls.CurveID
+	Error       error
+}
 
-	// fmt.Println(dicttls.DictCipherSuiteValueIndexed[uTlsConn.ConnectionState().CipherSuite])
-	ciphers := []uint16{
-		tls.TLS_AES_256_GCM_SHA384,
-		tls.TLS_CHACHA20_POLY1305_SHA256,
-		tls.TLS_AES_128_GCM_SHA256,
-		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-		tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-		TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
-		TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384,
-		tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-		tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-		TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
-		TLS_DHE_RSA_WITH_AES_256_CBC_SHA256,
-		TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
-		tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-		TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-		TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA256,
-		TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA,
-		TLS_GOSTR341001_WITH_28147_CNT_IMIT,
-		tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-		TLS_RSA_WITH_AES_256_CBC_SHA256,
-		tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-		TLS_RSA_WITH_CAMELLIA_256_CBC_SHA256,
-		TLS_RSA_WITH_CAMELLIA_256_CBC_SHA,
-		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
-		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-		TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
-		TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,
-		TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
-		TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA256,
-		TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA,
-		tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
-		tls.TLS_RSA_WITH_AES_128_CBC_SHA256,
-		tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-		TLS_RSA_WITH_CAMELLIA_128_CBC_SHA256,
-		TLS_RSA_WITH_CAMELLIA_128_CBC_SHA,
-		tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
-		tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,
-		tls.TLS_RSA_WITH_RC4_128_SHA,
-		TLS_RSA_WITH_RC4_128_MD5,
-		tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-		TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,
-		TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
-		tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-		TLS_EMPTY_RENEGOTIATION_INFO_SCSV,
+// PerformTLSHandshake performs a TLS handshake with the specified parameters
+// protocolVer: TLS protocol version (e.g., tls.VersionTLS12)
+// ciphers: list of cipher suites to offer
+// curves: list of elliptic curves to offer
+// serverAddr: server address (e.g., "localhost:443")
+func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.CurveID, serverAddr string) (*TLSHandshakeResult, error) {
+	if len(ciphers) == 0 || ciphers == nil {
+		ciphers = defaultCiphers
 	}
 
+	if len(curves) == 0 || curves == nil {
+		curves = defaultCurves
+	}
+
+	// parse serverAddr to extract SNI host
+	// For simplicity, we assume serverAddr is in the format "host:port"
+	sniHost, _, err := net.SplitHostPort(serverAddr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid server address: %v", err)
+	}
+
+	// Build ClientHello message
 	clientMsg := ftls.ClientHelloMsg{
-		Vers:               tls.VersionTLS13,
+		Vers:               protocolVer,
 		CipherSuites:       ciphers,
 		CompressionMethods: []uint8{ftls.CompressionNone},
-		ServerName:         "localhost",
+		ServerName:         sniHost,
 		SessionId:          []byte{},
 		Random: []byte{0x3a, 0x6e, 0x72, 0xcc, 0xf9, 0x3b, 0x29, 0xbb, 0xfb, 0x2d, 0xd0, 0xa3,
 			0x2b, 0x76, 0x3a, 0x9d, 0x28, 0x89, 0x11, 0xae, 0xfe, 0x4f, 0xf, 0x37, 0x6d,
 			0xce, 0xa0, 0x4a, 0xf, 0x8d, 0x6e, 0x15},
-		// SupportedVersions:  []uint16{tls.VersionTLS13, tls.VersionTLS12, tls.VersionTLS11, tls.VersionTLS10},
-		SupportedPoints: []uint8{ftls.PointFormatUncompressed},
-		SupportedCurves: []ftls.CurveID{ftls.X25519, ftls.CurveP256, ftls.CurveP384, ftls.CurveP521},
+		SupportedVersions: []uint16{tls.VersionTLS13, tls.VersionTLS12, tls.VersionTLS11, tls.VersionTLS10},
+		SupportedPoints:   []uint8{ftls.PointFormatUncompressed},
+		SupportedCurves:   curves,
 		SupportedSignatureAlgorithms: []ftls.SignatureScheme{
 			ftls.PSSWithSHA512,
 			ftls.PKCS1WithSHA512,
@@ -127,7 +102,7 @@ func main() {
 
 	clientHello, err := clientMsg.MarshalMsg(false)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to marshal ClientHello: %v", err)
 	}
 
 	// Wrap the handshake message in a TLS record
@@ -138,59 +113,50 @@ func main() {
 	binary.BigEndian.PutUint16(tlsRecord[3:5], uint16(len(clientHello))) // Record length
 	copy(tlsRecord[5:], clientHello)                                     // Handshake data
 
-	resp, err := sendClientHello("localhost:443", tlsRecord)
+	// Send ClientHello and receive response
+	resp, err := sendClientHello(serverAddr, tlsRecord)
 	if err != nil {
-		fmt.Println("Handshake failed:", err)
+		return nil, fmt.Errorf("handshake failed: %v", err)
 	}
 
+	// Parse handshake messages
 	serverHelloBytes, serverKeyExchangeBytes, err := getHandshakeMessages(resp)
 	if err != nil {
-		fmt.Println("Failed to get handshake messages:", err)
-		return
+		return nil, fmt.Errorf("failed to get handshake messages: %v", err)
 	}
 
-	serverHello := ftls.ServerHelloMsg{}
-	// Parse ServerHello if available
+	result := &TLSHandshakeResult{}
+
+	// Parse ServerHello
 	if serverHelloBytes != nil {
-		// serverHello := ftls.ServerHelloMsg{}
+		serverHello := &ftls.ServerHelloMsg{}
 		success := serverHello.Unmarshal(serverHelloBytes)
 		if !success {
-			fmt.Println("Failed to unmarshal ServerHello")
-			log.Panic()
+			return nil, fmt.Errorf("failed to unmarshal ServerHello")
 		}
-		// else {
-		// 	fmt.Printf("ServerHello:\n%+v\n", serverHello)
-		// }
+		result.ServerHello = serverHello
 	}
 
 	// Parse ServerKeyExchange if available
 	if serverKeyExchangeBytes != nil {
-		serverKeyExchange := ftls.ServerKeyExchangeMsg{}
-		b3 := serverKeyExchange.Unmarshal(serverKeyExchangeBytes)
-		if !b3 {
-			fmt.Println("Failed to unmarshal ServerKeyExchange")
-		} else {
-			// fmt.Printf("ServerKeyExchange:\n%+v\n", serverKeyExchange)
+		serverKeyExchange := &ftls.ServerKeyExchangeMsg{}
+		success := serverKeyExchange.Unmarshal(serverKeyExchangeBytes)
+		if !success {
+			return nil, fmt.Errorf("failed to unmarshal ServerKeyExchange")
+		}
 
-			// Parse the key exchange data to identify key type and size
-			err := serverKeyExchange.GetKey()
-			if err != nil {
-				fmt.Printf("Failed to parse ServerKeyExchange: %v\n", err)
-			} else {
-				serverHello.ServerShare.Group = serverKeyExchange.CurveID
-				serverHello.ServerShare.Name = serverKeyExchange.KeyType
-				// serverHello.ServerShare.Data = serverKeyExchange.Key
-				fmt.Printf("Key Analysis:\n")
-				fmt.Printf("  Type: %s\n", serverKeyExchange.KeyType)
-				fmt.Printf("  Size: %d bytes\n", serverKeyExchange.KeySize)
-				if serverHello.ServerShare.Group != 0 {
-					fmt.Printf("  Curve ID: 0x%04x\n", serverHello.ServerShare.Group)
-				}
-			}
+		// Get the key exchange information using the built-in method
+		err := serverKeyExchange.GetKey()
+		if err != nil {
+			result.Error = fmt.Errorf("failed to parse ServerKeyExchange: %v", err)
+		} else {
+			result.KeyType = serverKeyExchange.KeyType
+			result.KeySize = serverKeyExchange.KeySize
+			result.CurveID = serverKeyExchange.CurveID
 		}
 	}
 
-	fmt.Printf("ServerHello:\n%+v\n", serverHello)
+	return result, nil
 }
 
 func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
