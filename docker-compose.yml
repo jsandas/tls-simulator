@@ -1,8 +1,10 @@
 services:
-  nginx:
+  nginx_good:
     image: ghcr.io/jsandas/nginx_good
-    volumes:
-      - ./files/default.conf:/etc/nginx/conf.d/default.conf
-      - ./files/nginx.config:/etc/nginx/nginx.conf
     ports:
       - "443:443"
+
+  nginx_bad:
+    image: ghcr.io/jsandas/nginx_bad
+    ports:
+      - "8443:443"
