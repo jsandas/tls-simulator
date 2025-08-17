@@ -36,7 +36,9 @@ func WaitForServer(addr string, timeout time.Duration) error {
 	for time.Now().Before(deadline) {
 		conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
 		if err == nil {
-			conn.Close()
+			if cerr := conn.Close(); cerr != nil {
+				return fmt.Errorf("failed to close connection: %v", cerr)
+			}
 			return nil
 		}
 		time.Sleep(500 * time.Millisecond)
