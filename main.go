@@ -21,22 +21,9 @@ type TLSHandshakeResult struct {
 	Error   error
 }
 
-// PerformTLSHandshake performs a TLS handshake with the specified parameters.
-func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.CurveID, serverAddr string) (*TLSHandshakeResult, error) {
-	// protocolVer: TLS protocol version (e.g., tls.VersionTLS12)
-	// ciphers: list of cipher suites to offer
-	// curves: list of elliptic curves to offer
-	// serverAddr: server address (e.g., "localhost:443")
-
-	// parse serverAddr to extract SNI host
-	// For simplicity, we assume serverAddr is in the format "host:port"
-	sniHost, _, err := net.SplitHostPort(serverAddr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid server address: %v", err)
-	}
-
-	// Build ClientHello message
-	clientMsg := ftls.ClientHelloMsg{
+// buildClientHello creates a ClientHelloMsg with the specified parameters.
+func buildClientHello(protocolVer uint16, ciphers []uint16, curves []ftls.CurveID, sniHost string) *ftls.ClientHelloMsg {
+	clientMsg := &ftls.ClientHelloMsg{
 		Vers:               protocolVer,
 		CipherSuites:       ciphers,
 		CompressionMethods: []uint8{ftls.CompressionNone},
@@ -45,114 +32,88 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 		Random: []byte{0x3a, 0x6e, 0x72, 0xcc, 0xf9, 0x3b, 0x29, 0xbb, 0xfb, 0x2d, 0xd0, 0xa3,
 			0x2b, 0x76, 0x3a, 0x9d, 0x28, 0x89, 0x11, 0xae, 0xfe, 0x4f, 0xf, 0x37, 0x6d,
 			0xce, 0xa0, 0x4a, 0xf, 0x8d, 0x6e, 0x15},
-		// SupportedVersions: []uint16{tls.VersionTLS13, tls.VersionTLS12, tls.VersionTLS11, tls.VersionTLS10},
 		SupportedPoints: []uint8{ftls.PointFormatUncompressed},
 		SupportedCurves: curves,
 		SupportedSignatureAlgorithms: []ftls.SignatureScheme{
-			ftls.PSSWithSHA512,
-			ftls.PKCS1WithSHA512,
-			ftls.ECDSAWithP521AndSHA512,
-			ftls.PSSWithSHA384,
-			ftls.PKCS1WithSHA384,
-			ftls.ECDSAWithP384AndSHA384,
-			ftls.PKCS1WithSHA256,
-			ftls.PSSWithSHA256,
-			ftls.ECDSAWithP256AndSHA256,
-			ftls.PKCS1WithSHA1,
-			ftls.ECDSAWithSHA1,
+			ftls.PSSWithSHA512, ftls.PKCS1WithSHA512, ftls.ECDSAWithP521AndSHA512,
+			ftls.PSSWithSHA384, ftls.PKCS1WithSHA384, ftls.ECDSAWithP384AndSHA384,
+			ftls.PKCS1WithSHA256, ftls.PSSWithSHA256, ftls.ECDSAWithP256AndSHA256,
+			ftls.PKCS1WithSHA1, ftls.ECDSAWithSHA1,
 		},
-		KeyShares: []ftls.KeyShare{
-			{
-				Group: ftls.X25519,
-				Data: []byte{0xed, 0x7, 0xea, 0x17, 0xf2, 0x33, 0x83, 0x69, 0x5, 0x94, 0x89,
-					0xc7, 0x9f, 0x57, 0x19, 0xcd, 0x6b, 0xcb, 0xe7, 0x22, 0x3d, 0xb1, 0x1b,
-					0x8b, 0xe1, 0x52, 0x1d, 0xc2, 0x49, 0x48, 0xe4, 0x3d},
-			},
-		},
+		KeyShares: []ftls.KeyShare{{
+			Group: ftls.X25519,
+			Data: []byte{0xed, 0x7, 0xea, 0x17, 0xf2, 0x33, 0x83, 0x69, 0x5, 0x94, 0x89,
+				0xc7, 0x9f, 0x57, 0x19, 0xcd, 0x6b, 0xcb, 0xe7, 0x22, 0x3d, 0xb1, 0x1b,
+				0x8b, 0xe1, 0x52, 0x1d, 0xc2, 0x49, 0x48, 0xe4, 0x3d},
+		}},
 		AlpnProtocols: []string{"h2", "http/1.1"},
 	}
 
 	if protocolVer == tls.VersionTLS13 {
 		clientMsg.SupportedVersions = []uint16{tls.VersionTLS13}
-	}
-
-	if len(ciphers) == 0 || ciphers == nil {
-		if protocolVer == tls.VersionTLS13 {
+		if len(ciphers) == 0 {
 			clientMsg.CipherSuites = ftls.DefaultCipherSuitesTLS13
-		} else {
-			clientMsg.CipherSuites = ftls.DefaultCipherSuites
 		}
+	} else if len(ciphers) == 0 {
+		clientMsg.CipherSuites = ftls.DefaultCipherSuites
 	}
 
-	if len(curves) == 0 || curves == nil {
+	if len(curves) == 0 {
 		clientMsg.SupportedCurves = defaultCurves
 	}
 
-	clientHello, err := clientMsg.MarshalMsg(false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal ClientHello: %v", err)
-	}
+	return clientMsg
+}
 
-	// Wrap the handshake message in a TLS record
-	messageLen := len(clientHello)
-	// Check for potential overflow of clientHello length
+// createTLSRecord wraps a handshake message in a TLS record.
+func createTLSRecord(handshakeMsg []byte) ([]byte, error) {
+	messageLen := len(handshakeMsg)
 	if messageLen > 65535 {
-		return nil, fmt.Errorf("clientHello too large: %d bytes", messageLen)
+		return nil, fmt.Errorf("handshake message too large: %d bytes", messageLen)
 	}
 
-	tlsRecord := make([]byte, 5+messageLen)
-	tlsRecord[0] = 0x16                                   // Handshake record type
-	tlsRecord[1] = 0x03                                   // TLS version major
-	tlsRecord[2] = 0x03                                   // TLS version minor
-	recordLen := uint16(messageLen)                       // Safe conversion, we checked the bounds
-	binary.BigEndian.PutUint16(tlsRecord[3:5], recordLen) // Record length
-	copy(tlsRecord[5:], clientHello)                      // Handshake data
+	record := make([]byte, 5+messageLen)
+	record[0] = 0x16                                            // Handshake record type
+	record[1] = 0x03                                            // TLS version major
+	record[2] = 0x03                                            // TLS version minor
+	binary.BigEndian.PutUint16(record[3:5], uint16(messageLen)) // Record length
+	copy(record[5:], handshakeMsg)                              // Handshake data
 
-	// Send ClientHello and receive response
-	resp, err := sendClientHello(serverAddr, tlsRecord)
-	if err != nil {
-		return nil, fmt.Errorf("handshake failed: %v", err)
-	}
+	return record, nil
+}
 
-	// Parse handshake messages
-	serverHelloBytes, serverKeyExchangeBytes, err := getHandshakeMessages(resp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get handshake messages: %v", err)
-	}
-
+// parseServerResponse processes the server's response and creates a TLSHandshakeResult.
+func parseServerResponse(serverHelloBytes, serverKeyExchangeBytes []byte) (*TLSHandshakeResult, error) {
 	result := &TLSHandshakeResult{}
 
-	// Parse ServerHello
-	if serverHelloBytes != nil {
-		serverHello := &ftls.ServerHelloMsg{}
-		success := serverHello.Unmarshal(serverHelloBytes)
-		if !success {
-			return nil, fmt.Errorf("failed to unmarshal ServerHello")
-		}
-		result.ServerHello = serverHello
-		if serverHello.SupportedVersion != 0 {
-			result.Protocol = int(serverHello.SupportedVersion)
-		} else {
-			result.Protocol = int(serverHello.Vers)
-		}
-		result.Cipher = serverHello.CipherSuite
+	if serverHelloBytes == nil {
+		return nil, fmt.Errorf("no ServerHello message received")
 	}
 
-	if result.ServerHello.ServerShare.Group != 0 {
-		result.CurveID = result.ServerHello.ServerShare.Group
+	serverHello := &ftls.ServerHelloMsg{}
+	if !serverHello.Unmarshal(serverHelloBytes) {
+		return nil, fmt.Errorf("failed to unmarshal ServerHello")
 	}
 
-	// Parse ServerKeyExchange if available
+	result.ServerHello = serverHello
+	if serverHello.SupportedVersion != 0 {
+		result.Protocol = int(serverHello.SupportedVersion)
+	} else {
+		result.Protocol = int(serverHello.Vers)
+	}
+	result.Cipher = serverHello.CipherSuite
+
+	if serverHello.ServerShare.Group != 0 {
+		result.CurveID = serverHello.ServerShare.Group
+	}
+
 	if serverKeyExchangeBytes != nil {
 		serverKeyExchange := &ftls.ServerKeyExchangeMsg{}
-		success := serverKeyExchange.Unmarshal(serverKeyExchangeBytes)
-		if !success {
+		if !serverKeyExchange.Unmarshal(serverKeyExchangeBytes) {
 			return nil, fmt.Errorf("failed to unmarshal ServerKeyExchange")
 		}
 
-		// Get the key exchange information using the built-in method
-		err := serverKeyExchange.GetKey()
-		if err != nil {
+		if err := serverKeyExchange.GetKey(); err != nil {
 			result.Error = fmt.Errorf("failed to parse ServerKeyExchange: %v", err)
 		} else {
 			result.ServerHello.ServerShare.Group = serverKeyExchange.CurveID
@@ -163,36 +124,86 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 	return result, nil
 }
 
+// PerformTLSHandshake performs a TLS handshake with the specified parameters.
+func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.CurveID, serverAddr string) (*TLSHandshakeResult, error) {
+	sniHost, _, err := net.SplitHostPort(serverAddr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid server address: %v", err)
+	}
+
+	clientMsg := buildClientHello(protocolVer, ciphers, curves, sniHost)
+	clientHello, err := clientMsg.MarshalMsg(false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal ClientHello: %v", err)
+	}
+
+	tlsRecord, err := createTLSRecord(clientHello)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create TLS record: %v", err)
+	}
+
+	resp, err := sendClientHello(serverAddr, tlsRecord)
+	if err != nil {
+		return nil, fmt.Errorf("handshake failed: %v", err)
+	}
+
+	serverHello, serverKeyExchange, err := getHandshakeMessages(resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get handshake messages: %v", err)
+	}
+
+	return parseServerResponse(serverHello, serverKeyExchange)
+}
+
 func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 	conn, err := net.DialTimeout("tcp", addr, 5*time.Second)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("connection failed: %v", err)
 	}
 	defer conn.Close()
 
-	conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
-	_, err = conn.Write(clientHello)
-	if err != nil {
-		return nil, err
+	// Set write deadline and send ClientHello
+	if err := conn.SetWriteDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		return nil, fmt.Errorf("failed to set write deadline: %v", err)
+	}
+	if _, err := conn.Write(clientHello); err != nil {
+		return nil, fmt.Errorf("failed to write ClientHello: %v", err)
 	}
 
-	// Read all available response data
-	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	// Set read deadline and read response
+	if err := conn.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		return nil, fmt.Errorf("failed to set read deadline: %v", err)
+	}
+
 	var resp []byte
 	buffer := make([]byte, 4096)
 
 	for {
 		n, err := conn.Read(buffer)
-		if err != nil {
-			if n > 0 {
-				resp = append(resp, buffer[:n]...)
-			}
-			break
+		if n > 0 {
+			resp = append(resp, buffer[:n]...)
 		}
-		resp = append(resp, buffer[:n]...)
+		if err != nil {
+			// If we got some data before the error, and it's a timeout,
+			// we consider this a success - the server might have just closed
+			// the connection after sending the response
+			if len(resp) > 0 && isTimeoutError(err) {
+				return resp, nil
+			}
+			if isTimeoutError(err) {
+				return nil, fmt.Errorf("read timeout: %v", err)
+			}
+			return nil, fmt.Errorf("read error: %v", err)
+		}
 	}
+}
 
-	return resp, nil
+// isTimeoutError returns true if the error is a timeout.
+func isTimeoutError(err error) bool {
+	if err, ok := err.(net.Error); ok {
+		return err.Timeout()
+	}
+	return false
 }
 
 func getHandshakeMessages(data []byte) (serverHello, serverKeyExchange []byte, err error) {
