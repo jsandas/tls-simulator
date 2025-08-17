@@ -10,7 +10,7 @@ import (
 	"github.com/jsandas/tls-simulator/ftls"
 )
 
-// TLSHandshakeResult contains the parsed ServerHello and key exchange information
+// TLSHandshakeResult contains the parsed ServerHello and key exchange information.
 type TLSHandshakeResult struct {
 	ServerHello *ftls.ServerHelloMsg
 	Protocol    int
@@ -21,12 +21,13 @@ type TLSHandshakeResult struct {
 	Error   error
 }
 
-// PerformTLSHandshake performs a TLS handshake with the specified parameters
-// protocolVer: TLS protocol version (e.g., tls.VersionTLS12)
-// ciphers: list of cipher suites to offer
-// curves: list of elliptic curves to offer
-// serverAddr: server address (e.g., "localhost:443")
+// PerformTLSHandshake performs a TLS handshake with the specified parameters.
 func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.CurveID, serverAddr string) (*TLSHandshakeResult, error) {
+	// protocolVer: TLS protocol version (e.g., tls.VersionTLS12)
+	// ciphers: list of cipher suites to offer
+	// curves: list of elliptic curves to offer
+	// serverAddr: server address (e.g., "localhost:443")
+
 	// parse serverAddr to extract SNI host
 	// For simplicity, we assume serverAddr is in the format "host:port"
 	sniHost, _, err := net.SplitHostPort(serverAddr)

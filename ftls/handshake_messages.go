@@ -938,7 +938,7 @@ func (m *ServerKeyExchangeMsg) Unmarshal(data []byte) bool {
 	return true
 }
 
-// GetKey returns the key exchange data
+// GetKey returns the key exchange data.
 func (m *ServerKeyExchangeMsg) GetKey() error {
 	key := m.Key
 	if len(key) < 4 {
