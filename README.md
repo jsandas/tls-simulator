@@ -5,9 +5,10 @@ A Go module for performing TLS handshakes and analyzing cryptographic parameters
 ## Features
 
 - **TLS Handshake Simulation**: Perform TLS handshakes with custom parameters
-- **Key Exchange Analysis**: Identify and analyze key exchange methods (ECDHE, DH)
-- **Cipher Suite Support**: Support for various cipher suites and elliptic curves
-- **Protocol Version Support**: TLS 1.0, 1.1, 1.2, and 1.3 support
+- **Protocol Version Detection**: Identify negotiated TLS protocol version
+- **Cipher Suite Analysis**: Determine the selected cipher suite from the handshake
+- **Key Exchange Analysis**: Identify elliptic curves used for ECDHE and DH key exchange parameters
+- **Comprehensive Support**: TLS 1.0, 1.1, 1.2, and 1.3 support with various cipher suites
 
 ## Installation
 
@@ -33,9 +34,9 @@ import (
 func main() {
     // Define cipher suites to offer
     ciphers := []uint16{
-        tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-        tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-        tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+        ftls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+        ftls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+        ftls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
     }
 
     // Define elliptic curves to support
@@ -48,7 +49,7 @@ func main() {
 
     // Perform TLS handshake
     result, err := PerformTLSHandshake(
-        tls.VersionTLS12,  // Protocol version
+        ftls.VersionTLS12,  // Protocol version
         ciphers,           // Cipher suites
         curves,            // Elliptic curves
         "localhost:443",   // Server address
@@ -59,34 +60,48 @@ func main() {
 
     // Analyze results
     fmt.Printf("ServerHello: %+v\n", result.ServerHello)
-    if result.KeyType != "" {
-        fmt.Printf("Key Type: %s\n", result.KeyType)
-        fmt.Printf("Key Size: %d bytes\n", result.KeySize)
-        if result.CurveID != 0 {
-            fmt.Printf("Curve ID: 0x%04x\n", result.CurveID)
-        }
+    if result.Protocol != 0 {
+        fmt.Printf("Protocol Version: %d\n", result.Protocol)
+    }
+    if result.Cipher != 0 {
+        fmt.Printf("Cipher Suite: 0x%04x\n", result.Cipher)
+    }
+    if result.CurveID != 0 {
+        fmt.Printf("Curve ID: 0x%04x\n", result.CurveID)
+    }
+    if result.Error != nil {
+        fmt.Printf("Error: %v\n", result.Error)
+    }
+    
+    // For detailed key exchange analysis, access ServerHello.ServerShare
+    if result.ServerHello != nil && result.ServerHello.ServerShare.Group != 0 {
+        fmt.Printf("Key Exchange Group: 0x%04x\n", result.ServerHello.ServerShare.Group)
     }
 }
 ```
 
-### Supported Key Exchange Types
+### Analysis Capabilities
 
 The module can identify and analyze:
 
-#### ECDHE (Elliptic Curve Diffie-Hellman Ephemeral)
-- **X25519**: 32-byte keys
-- **P-256**: 32-byte keys  
-- **P-384**: 48-byte keys
-- **P-521**: 66-byte keys
+#### Protocol Information
+- **TLS Version**: The negotiated protocol version (TLS 1.0, 1.1, 1.2, or 1.3)
+- **Cipher Suite**: The selected cipher suite from the offered list
 
-#### DH (Finite Field Diffie-Hellman)
-- **DH-1024**: 1024-bit keys
-- **DH-2048**: 2048-bit keys
-- **ffdhe2048 (RFC 7919)**: Standardized 2048-bit group
-- **ffdhe3072 (RFC 7919)**: Standardized 3072-bit group
-- **ffdhe4096 (RFC 7919)**: Standardized 4096-bit group
-- **ffdhe6144 (RFC 7919)**: Standardized 6144-bit group
-- **ffdhe8192 (RFC 7919)**: Standardized 8192-bit group
+#### Key Exchange Analysis
+- **ECDHE Curves**: Identifies the elliptic curve used for ECDHE key exchange
+  - **X25519**: Curve25519 for high-performance implementations
+  - **P-256**: NIST P-256 curve (secp256r1)
+  - **P-384**: NIST P-384 curve (secp384r1)  
+  - **P-521**: NIST P-521 curve (secp521r1)
+
+- **DH (Finite Field Diffie-Hellman)**: Identifies DH key exchange parameters
+  - **DH-1024**: 1024-bit keys (legacy, not in RFC 7919)
+  - **DH-2048**: 2048-bit keys (ffdhe2048, RFC 7919)
+  - **DH-3072**: 3072-bit keys (ffdhe3072, RFC 7919)
+  - **DH-4096**: 4096-bit keys (ffdhe4096, RFC 7919)
+  - **DH-6144**: 6144-bit keys (ffdhe6144, RFC 7919)
+  - **DH-8192**: 8192-bit keys (ffdhe8192, RFC 7919)
 
 ## API Reference
 
@@ -106,9 +121,9 @@ func PerformTLSHandshake(
 ```go
 type TLSHandshakeResult struct {
     ServerHello *ftls.ServerHelloMsg  // Parsed ServerHello message
-    KeyType     string                // Key exchange type (e.g., "X25519", "ffdhe2048")
-    KeySize     int                   // Key size in bytes
-    CurveID     ftls.CurveID         // Curve ID for ECDHE
+    Protocol    int                   // Negotiated protocol version
+    Cipher      uint16                // Negotiated cipher suite
+    CurveID     ftls.CurveID         // Curve ID for ECDHE key exchange
     Error       error                 // Any parsing errors
 }
 ```
