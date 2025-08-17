@@ -905,12 +905,26 @@ type ServerKeyExchangeMsg struct {
 }
 
 func (m *ServerKeyExchangeMsg) Marshal() ([]byte, error) {
-	length := len(m.Key)
-	x := make([]byte, length+4)
+	keyLen := len(m.Key)
+
+	// Check if length exceeds maximum allowed size (2^24 - 1 for TLS record)
+	// Do this check with ints to avoid any conversions
+	if keyLen > 0xFFFFFF {
+		return nil, fmt.Errorf("ServerKeyExchange message too long: %d bytes", keyLen)
+	}
+
+	x := make([]byte, keyLen+4)
 	x[0] = TypeServerKeyExchange
-	x[1] = uint8(length >> 16)
-	x[2] = uint8(length >> 8)
-	x[3] = uint8(length)
+
+	// Since we verified keyLen <= 0xFFFFFF (fits in 24 bits)
+	// these operations are safe as they only access the low 24 bits
+	b1 := byte((keyLen >> 16) & 0xFF) // highest byte, bits 16-23
+	b2 := byte((keyLen >> 8) & 0xFF)  // middle byte, bits 8-15
+	b3 := byte(keyLen & 0xFF)         // lowest byte, bits 0-7
+
+	x[1] = b1
+	x[2] = b2
+	x[3] = b3
 	copy(x[4:], m.Key)
 
 	return x, nil

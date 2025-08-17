@@ -63,7 +63,9 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 		KeyShares: []ftls.KeyShare{
 			{
 				Group: ftls.X25519,
-				Data:  []byte{0xed, 0x7, 0xea, 0x17, 0xf2, 0x33, 0x83, 0x69, 0x5, 0x94, 0x89, 0xc7, 0x9f, 0x57, 0x19, 0xcd, 0x6b, 0xcb, 0xe7, 0x22, 0x3d, 0xb1, 0x1b, 0x8b, 0xe1, 0x52, 0x1d, 0xc2, 0x49, 0x48, 0xe4, 0x3d},
+				Data: []byte{0xed, 0x7, 0xea, 0x17, 0xf2, 0x33, 0x83, 0x69, 0x5, 0x94, 0x89,
+					0xc7, 0x9f, 0x57, 0x19, 0xcd, 0x6b, 0xcb, 0xe7, 0x22, 0x3d, 0xb1, 0x1b,
+					0x8b, 0xe1, 0x52, 0x1d, 0xc2, 0x49, 0x48, 0xe4, 0x3d},
 			},
 		},
 		AlpnProtocols: []string{"h2", "http/1.1"},
@@ -91,12 +93,19 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 	}
 
 	// Wrap the handshake message in a TLS record
-	tlsRecord := make([]byte, 5+len(clientHello))
-	tlsRecord[0] = 0x16                                                  // Handshake record type
-	tlsRecord[1] = 0x03                                                  // TLS version major
-	tlsRecord[2] = 0x03                                                  // TLS version minor
-	binary.BigEndian.PutUint16(tlsRecord[3:5], uint16(len(clientHello))) // Record length
-	copy(tlsRecord[5:], clientHello)                                     // Handshake data
+	messageLen := len(clientHello)
+	// Check for potential overflow of clientHello length
+	if messageLen > 65535 {
+		return nil, fmt.Errorf("clientHello too large: %d bytes", messageLen)
+	}
+
+	tlsRecord := make([]byte, 5+messageLen)
+	tlsRecord[0] = 0x16                                   // Handshake record type
+	tlsRecord[1] = 0x03                                   // TLS version major
+	tlsRecord[2] = 0x03                                   // TLS version minor
+	recordLen := uint16(messageLen)                       // Safe conversion, we checked the bounds
+	binary.BigEndian.PutUint16(tlsRecord[3:5], recordLen) // Record length
+	copy(tlsRecord[5:], clientHello)                      // Handshake data
 
 	// Send ClientHello and receive response
 	resp, err := sendClientHello(serverAddr, tlsRecord)
@@ -201,8 +210,16 @@ func getHandshakeMessages(data []byte) (serverHello, serverKeyExchange []byte, e
 			j := 0
 			for j+4 <= len(recordPayload) {
 				handshakeType := recordPayload[j]
-				handshakeLen := int(recordPayload[j+1])<<16 | int(recordPayload[j+2])<<8 | int(recordPayload[j+3])
-				if j+4+handshakeLen > len(recordPayload) {
+				// Calculate handshake length using uint32 for safe arithmetic
+				handshakeLenUint := uint32(recordPayload[j+1])<<16 | uint32(recordPayload[j+2])<<8 | uint32(recordPayload[j+3])
+
+				// Check if the calculated length exceeds the maximum safe int value
+				if handshakeLenUint > (1<<31 - 1) {
+					break // Length too large, skip this message
+				}
+
+				handshakeLen := int(handshakeLenUint)
+				if handshakeLen < 0 || j+4+handshakeLen > len(recordPayload) {
 					break // Malformed handshake message
 				}
 				handshakeMessage := recordPayload[j : j+4+handshakeLen]
