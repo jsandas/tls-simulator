@@ -62,7 +62,7 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 		},
 		KeyShares: []ftls.KeyShare{
 			{
-				Group: ftls.CurveID(ftls.X25519),
+				Group: ftls.X25519,
 				Data:  []byte{0xed, 0x7, 0xea, 0x17, 0xf2, 0x33, 0x83, 0x69, 0x5, 0x94, 0x89, 0xc7, 0x9f, 0x57, 0x19, 0xcd, 0x6b, 0xcb, 0xe7, 0x22, 0x3d, 0xb1, 0x1b, 0x8b, 0xe1, 0x52, 0x1d, 0xc2, 0x49, 0x48, 0xe4, 0x3d},
 			},
 		},
@@ -70,7 +70,6 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 	}
 
 	if protocolVer == tls.VersionTLS13 {
-		// clientMsg.Vers = tls.VersionTLS12
 		clientMsg.SupportedVersions = []uint16{tls.VersionTLS13}
 	}
 
@@ -186,12 +185,11 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 	return resp, nil
 }
 
-func getHandshakeMessages(data []byte) (serverHello []byte, serverKeyExchange []byte, err error) {
+func getHandshakeMessages(data []byte) (serverHello, serverKeyExchange []byte, err error) {
 	i := 0
 	for i+5 <= len(data) {
 		// Parse TLS record header
 		contentType := data[i]
-		// version := binary.BigEndian.Uint16(data[i+1 : i+3])
 		length := int(binary.BigEndian.Uint16(data[i+3 : i+5]))
 		if i+5+length > len(data) {
 			break // Malformed record
@@ -213,19 +211,11 @@ func getHandshakeMessages(data []byte) (serverHello []byte, serverKeyExchange []
 				case ftls.TypeServerHello:
 					if serverHello == nil {
 						serverHello = handshakeMessage
-						// fmt.Printf("    Found ServerHello\n")
 					}
 				case ftls.TypeServerKeyExchange:
 					if serverKeyExchange == nil {
 						serverKeyExchange = handshakeMessage
-						// fmt.Printf("    Found ServerKeyExchange\n")
 					}
-				case ftls.TypeCertificate:
-					// fmt.Printf("    Found Certificate\n")
-				case ftls.TypeServerHelloDone:
-					// fmt.Printf("    Found ServerHelloDone\n")
-				default:
-					// fmt.Printf("    Found other handshake message type: 0x%02x\n", handshakeType)
 				}
 				j += 4 + handshakeLen
 			}

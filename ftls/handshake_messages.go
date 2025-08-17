@@ -80,12 +80,12 @@ type ClientHelloMsg struct {
 
 func (m *ClientHelloMsg) MarshalMsg(echInner bool) ([]byte, error) {
 	var exts cryptobyte.Builder
-	if len(m.ServerName) > 0 {
+	if m.ServerName != "" {
 		// RFC 6066, Section 3
 		exts.AddUint16(ExtensionServerName)
 		exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
 			exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
-				exts.AddUint8(0) // name_type = host_name
+				exts.AddUint8(0) // name_type is host_name
 				exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
 					exts.AddBytes([]byte(m.ServerName))
 				})
@@ -157,7 +157,7 @@ func (m *ClientHelloMsg) MarshalMsg(echInner bool) ([]byte, error) {
 		} else {
 			exts.AddUint16(ExtensionStatusRequest)
 			exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
-				exts.AddUint8(1)  // status_type = ocsp
+				exts.AddUint8(1)  // status_type is ocsp
 				exts.AddUint16(0) // empty responder_id_list
 				exts.AddUint16(0) // empty request_extensions
 			})
@@ -423,7 +423,7 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 				if nameType != 0 {
 					continue
 				}
-				if len(m.ServerName) != 0 {
+				if m.ServerName != "" {
 					// Multiple names of the same name_type are prohibited.
 					return false
 				}
@@ -662,7 +662,7 @@ func (m *ServerHelloMsg) Marshal() ([]byte, error) {
 		exts.AddUint16(ExtensionExtendedMasterSecret)
 		exts.AddUint16(0) // empty extension_data
 	}
-	if len(m.AlpnProtocol) > 0 {
+	if m.AlpnProtocol != "" {
 		exts.AddUint16(ExtensionALPN)
 		exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
 			exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
@@ -769,7 +769,6 @@ func (m *ServerHelloMsg) Unmarshal(data []byte) bool {
 	*m = ServerHelloMsg{Original: data}
 	s := cryptobyte.String(data)
 
-	// fmt.Printf("Unmarshalling ServerHello: \n%x\n\n", data)
 	if !s.Skip(4) || // message type and uint24 length field
 		!s.ReadUint16(&m.Vers) || !s.ReadBytes(&m.Random, 32) ||
 		!readUint8LengthPrefixed(&s, &m.SessionId) ||
