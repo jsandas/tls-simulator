@@ -78,6 +78,7 @@ type ClientHelloMsg struct {
 	Extensions []uint16
 }
 
+//nolint:gocyclo
 func (m *ClientHelloMsg) MarshalMsg(echInner bool) ([]byte, error) {
 	var exts cryptobyte.Builder
 	if m.ServerName != "" {
@@ -349,6 +350,7 @@ func (m *ClientHelloMsg) MarshalMsg(echInner bool) ([]byte, error) {
 	return b.Bytes()
 }
 
+//nolint:gocyclo
 func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 	*m = ClientHelloMsg{original: data}
 	s := cryptobyte.String(data)
@@ -640,6 +642,7 @@ type ServerHelloMsg struct {
 	SelectedGroup CurveID
 }
 
+//nolint:gocyclo
 func (m *ServerHelloMsg) Marshal() ([]byte, error) {
 	var exts cryptobyte.Builder
 	if m.OcspStapling {
@@ -765,6 +768,7 @@ func (m *ServerHelloMsg) Marshal() ([]byte, error) {
 	return b.Bytes()
 }
 
+//nolint:gocyclo
 func (m *ServerHelloMsg) Unmarshal(data []byte) bool {
 	*m = ServerHelloMsg{Original: data}
 	s := cryptobyte.String(data)
@@ -939,6 +943,8 @@ func (m *ServerKeyExchangeMsg) Unmarshal(data []byte) bool {
 }
 
 // GetKey returns the key exchange data.
+//
+//nolint:gocyclo
 func (m *ServerKeyExchangeMsg) GetKey() error {
 	key := m.Key
 	if len(key) < 4 {
