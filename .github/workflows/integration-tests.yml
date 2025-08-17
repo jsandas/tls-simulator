@@ -1,0 +1,51 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: "go.mod"
+        cache: true
+        
+    - name: Set up Docker
+      uses: docker/setup-docker-action@v4
+      with:
+        docker-compose: true
+        
+    - name: Build the application
+      run: |
+        go mod download
+        go build -v .
+        
+    - name: Run integration tests
+      run: |
+        make test-integration
+      env:
+        # Increase timeout for CI environment
+        DOCKER_CLIENT_TIMEOUT: 120
+        COMPOSE_HTTP_TIMEOUT: 120
+        
+    - name: Run specific TLS 1.3 tests
+      run: |
+        make test-tls13-chacha20
+        make test-tls13-default
+        
+    - name: Cleanup Docker containers
+      if: always()
+      run: |
+        make docker-down || true
+        docker system prune -f || true
