@@ -78,13 +78,8 @@ linters-settings:
         Author: "jsandas"
         Email: "jsandas@users.noreply.github.com"
         Year: "2024"
-  gomnd:
-    checks: argument,case,condition,operation,return,assign
   goprintffuncname:
     prefix: "log"
-  gosec:
-    excludes:
-      - G404 # Use of weak random number generator (math/rand instead of crypto/rand)
   gosimple:
     go-critic: true
   govet:
