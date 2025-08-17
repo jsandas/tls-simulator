@@ -1,5 +1,10 @@
 # TLS Simulator
 
+[![Integration Tests](https://github.com/jsandas/tls-simulator/workflows/Integration%20Tests/badge.svg)](https://github.com/jsandas/tls-simulator/actions?query=workflow%3A%22Integration+Tests%22)
+[![CI](https://github.com/jsandas/tls-simulator/workflows/CI/badge.svg)](https://github.com/jsandas/tls-simulator/actions?query=workflow%3A%22CI%22)
+[![Go Version](https://img.shields.io/badge/go-1.24+-blue.svg)](https://golang.org/dl/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 A Go module for performing TLS handshakes and analyzing cryptographic parameters used in TLS connections.
 
 ## Features
@@ -141,6 +146,26 @@ go run example.go
 ```bash
 go build
 ```
+
+## Testing
+
+### Local Testing
+```bash
+# Run integration tests (requires Docker)
+make test-integration
+
+# Run specific TLS 1.3 tests
+make test-tls13-chacha20
+make test-tls13-default
+```
+
+### CI/CD
+This project uses GitHub Actions for continuous integration:
+- **Integration Tests**: Run on every PR and push to main branch
+- **Scheduled Tests**: Run daily to ensure nginx containers remain functional
+- **Security Scanning**: Automated security checks with gosec
+
+See [`.github/README.md`](.github/README.md) for detailed workflow documentation.
 
 ## Dependencies
 
