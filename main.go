@@ -130,8 +130,6 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 	}
 
 	if result.ServerHello.ServerShare.Group != 0 {
-		// result.KeyType = curveIDtoName[result.ServerHello.ServerShare.Group]
-		// result.KeySize = result.ServerHello.ServerShare.Size
 		result.CurveID = result.ServerHello.ServerShare.Group
 	}
 
@@ -148,11 +146,7 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 		if err != nil {
 			result.Error = fmt.Errorf("failed to parse ServerKeyExchange: %v", err)
 		} else {
-			// result.ServerHello.ServerShare.Name = curveIDtoName[serverKeyExchange.CurveID]
-			// result.ServerHello.ServerShare.Size = serverKeyExchange.KeySize
 			result.ServerHello.ServerShare.Group = serverKeyExchange.CurveID
-			// result.KeyType = curveIDtoName[serverKeyExchange.CurveID]
-			// result.KeySize = serverKeyExchange.KeySize
 			result.CurveID = serverKeyExchange.CurveID
 		}
 	}
@@ -203,7 +197,6 @@ func getHandshakeMessages(data []byte) (serverHello []byte, serverKeyExchange []
 			break // Malformed record
 		}
 		recordPayload := data[i+5 : i+5+length]
-		// fmt.Printf("TLS Record: type=0x%02x, version=0x%04x, length=%d\n", contentType, version, length)
 
 		if contentType == 0x16 { // Handshake
 			// Parse handshake messages within this record
@@ -215,8 +208,6 @@ func getHandshakeMessages(data []byte) (serverHello []byte, serverKeyExchange []
 					break // Malformed handshake message
 				}
 				handshakeMessage := recordPayload[j : j+4+handshakeLen]
-
-				// fmt.Printf("  Handshake message: type=0x%02x, length=%d\n", handshakeType, handshakeLen)
 
 				switch handshakeType {
 				case ftls.TypeServerHello:
