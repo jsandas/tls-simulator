@@ -1,5 +1,13 @@
 package ftls
 
+const (
+	VersionSSL30 = 0x0300
+	VersionTLS10 = 0x0301
+	VersionTLS11 = 0x0302
+	VersionTLS12 = 0x0303
+	VersionTLS13 = 0x0304
+)
+
 // TLS handshake message types.
 const (
 	TypeHelloRequest        uint8 = 0
@@ -82,7 +90,6 @@ const (
 type KeyShare struct {
 	Group CurveID
 	Data  []byte
-	Name  string
 }
 
 // TLS 1.3 PSK Identity. Can be a Session Ticket, or a reference to a saved

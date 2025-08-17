@@ -10,38 +10,15 @@ import (
 	"github.com/jsandas/tls-simulator/ftls"
 )
 
-var defaultCiphers = []uint16{
-	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-	tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-	tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-	tls.TLS_AES_256_GCM_SHA384,
-	tls.TLS_CHACHA20_POLY1305_SHA256,
-	tls.TLS_AES_128_GCM_SHA256,
-	tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-	tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-	tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-	tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-	tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-	tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
-	tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-	tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-	tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-	tls.TLS_RSA_WITH_RC4_128_SHA,
-}
-var defaultCurves = []ftls.CurveID{
-	ftls.X25519,
-	ftls.CurveP521,
-	ftls.CurveP384,
-	ftls.CurveP256}
-
 // TLSHandshakeResult contains the parsed ServerHello and key exchange information
 type TLSHandshakeResult struct {
 	ServerHello *ftls.ServerHelloMsg
-	KeyType     string
-	KeySize     int
-	CurveID     ftls.CurveID
-	Error       error
+	Protocol    int
+	Cipher      uint16
+	// KeyType     string
+	// KeySize     int
+	CurveID ftls.CurveID
+	Error   error
 }
 
 // PerformTLSHandshake performs a TLS handshake with the specified parameters
@@ -50,14 +27,6 @@ type TLSHandshakeResult struct {
 // curves: list of elliptic curves to offer
 // serverAddr: server address (e.g., "localhost:443")
 func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.CurveID, serverAddr string) (*TLSHandshakeResult, error) {
-	if len(ciphers) == 0 || ciphers == nil {
-		ciphers = defaultCiphers
-	}
-
-	if len(curves) == 0 || curves == nil {
-		curves = defaultCurves
-	}
-
 	// parse serverAddr to extract SNI host
 	// For simplicity, we assume serverAddr is in the format "host:port"
 	sniHost, _, err := net.SplitHostPort(serverAddr)
@@ -75,9 +44,9 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 		Random: []byte{0x3a, 0x6e, 0x72, 0xcc, 0xf9, 0x3b, 0x29, 0xbb, 0xfb, 0x2d, 0xd0, 0xa3,
 			0x2b, 0x76, 0x3a, 0x9d, 0x28, 0x89, 0x11, 0xae, 0xfe, 0x4f, 0xf, 0x37, 0x6d,
 			0xce, 0xa0, 0x4a, 0xf, 0x8d, 0x6e, 0x15},
-		SupportedVersions: []uint16{tls.VersionTLS13, tls.VersionTLS12, tls.VersionTLS11, tls.VersionTLS10},
-		SupportedPoints:   []uint8{ftls.PointFormatUncompressed},
-		SupportedCurves:   curves,
+		// SupportedVersions: []uint16{tls.VersionTLS13, tls.VersionTLS12, tls.VersionTLS11, tls.VersionTLS10},
+		SupportedPoints: []uint8{ftls.PointFormatUncompressed},
+		SupportedCurves: curves,
 		SupportedSignatureAlgorithms: []ftls.SignatureScheme{
 			ftls.PSSWithSHA512,
 			ftls.PKCS1WithSHA512,
@@ -98,6 +67,23 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 			},
 		},
 		AlpnProtocols: []string{"h2", "http/1.1"},
+	}
+
+	if protocolVer == tls.VersionTLS13 {
+		// clientMsg.Vers = tls.VersionTLS12
+		clientMsg.SupportedVersions = []uint16{tls.VersionTLS13}
+	}
+
+	if len(ciphers) == 0 || ciphers == nil {
+		if protocolVer == tls.VersionTLS13 {
+			clientMsg.CipherSuites = ftls.DefaultCipherSuitesTLS13
+		} else {
+			clientMsg.CipherSuites = ftls.DefaultCipherSuites
+		}
+	}
+
+	if len(curves) == 0 || curves == nil {
+		clientMsg.SupportedCurves = defaultCurves
 	}
 
 	clientHello, err := clientMsg.MarshalMsg(false)
@@ -135,6 +121,18 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 			return nil, fmt.Errorf("failed to unmarshal ServerHello")
 		}
 		result.ServerHello = serverHello
+		if serverHello.SupportedVersion != 0 {
+			result.Protocol = int(serverHello.SupportedVersion)
+		} else {
+			result.Protocol = int(serverHello.Vers)
+		}
+		result.Cipher = serverHello.CipherSuite
+	}
+
+	if result.ServerHello.ServerShare.Group != 0 {
+		// result.KeyType = curveIDtoName[result.ServerHello.ServerShare.Group]
+		// result.KeySize = result.ServerHello.ServerShare.Size
+		result.CurveID = result.ServerHello.ServerShare.Group
 	}
 
 	// Parse ServerKeyExchange if available
@@ -150,8 +148,11 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 		if err != nil {
 			result.Error = fmt.Errorf("failed to parse ServerKeyExchange: %v", err)
 		} else {
-			result.KeyType = serverKeyExchange.KeyType
-			result.KeySize = serverKeyExchange.KeySize
+			// result.ServerHello.ServerShare.Name = curveIDtoName[serverKeyExchange.CurveID]
+			// result.ServerHello.ServerShare.Size = serverKeyExchange.KeySize
+			result.ServerHello.ServerShare.Group = serverKeyExchange.CurveID
+			// result.KeyType = curveIDtoName[serverKeyExchange.CurveID]
+			// result.KeySize = serverKeyExchange.KeySize
 			result.CurveID = serverKeyExchange.CurveID
 		}
 	}
@@ -196,13 +197,13 @@ func getHandshakeMessages(data []byte) (serverHello []byte, serverKeyExchange []
 	for i+5 <= len(data) {
 		// Parse TLS record header
 		contentType := data[i]
-		version := binary.BigEndian.Uint16(data[i+1 : i+3])
+		// version := binary.BigEndian.Uint16(data[i+1 : i+3])
 		length := int(binary.BigEndian.Uint16(data[i+3 : i+5]))
 		if i+5+length > len(data) {
 			break // Malformed record
 		}
 		recordPayload := data[i+5 : i+5+length]
-		fmt.Printf("TLS Record: type=0x%02x, version=0x%04x, length=%d\n", contentType, version, length)
+		// fmt.Printf("TLS Record: type=0x%02x, version=0x%04x, length=%d\n", contentType, version, length)
 
 		if contentType == 0x16 { // Handshake
 			// Parse handshake messages within this record
@@ -215,25 +216,25 @@ func getHandshakeMessages(data []byte) (serverHello []byte, serverKeyExchange []
 				}
 				handshakeMessage := recordPayload[j : j+4+handshakeLen]
 
-				fmt.Printf("  Handshake message: type=0x%02x, length=%d\n", handshakeType, handshakeLen)
+				// fmt.Printf("  Handshake message: type=0x%02x, length=%d\n", handshakeType, handshakeLen)
 
 				switch handshakeType {
 				case ftls.TypeServerHello:
 					if serverHello == nil {
 						serverHello = handshakeMessage
-						fmt.Printf("    Found ServerHello\n")
+						// fmt.Printf("    Found ServerHello\n")
 					}
 				case ftls.TypeServerKeyExchange:
 					if serverKeyExchange == nil {
 						serverKeyExchange = handshakeMessage
-						fmt.Printf("    Found ServerKeyExchange\n")
+						// fmt.Printf("    Found ServerKeyExchange\n")
 					}
 				case ftls.TypeCertificate:
-					fmt.Printf("    Found Certificate\n")
+					// fmt.Printf("    Found Certificate\n")
 				case ftls.TypeServerHelloDone:
-					fmt.Printf("    Found ServerHelloDone\n")
+					// fmt.Printf("    Found ServerHelloDone\n")
 				default:
-					fmt.Printf("    Found other handshake message type: 0x%02x\n", handshakeType)
+					// fmt.Printf("    Found other handshake message type: 0x%02x\n", handshakeType)
 				}
 				j += 4 + handshakeLen
 			}
