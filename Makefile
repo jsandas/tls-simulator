@@ -26,13 +26,13 @@ test-integration: docker-up
 test-tls13-chacha20: docker-up
 	@echo "Waiting for services to be ready..."
 	@sleep 5
-	go test -v -run "^TestTLS13WithChacha20Poly1305$" .
+	go test -v -run "^TestTLS13WithChacha20Poly1305" .
 	@$(MAKE) docker-down
 
 test-tls13-default: docker-up
 	@echo "Waiting for services to be ready..."
 	@sleep 5
-	go test -v -run "^TestTLS13WithDefaultCiphers$" .
+	go test -v -run "^TestTLS13WithDefaultCiphers" .
 	@$(MAKE) docker-down
 
 # Start docker services
