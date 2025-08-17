@@ -33,7 +33,7 @@ const (
 	CompressionNone uint8 = 0
 )
 
-// TLS extension numbers
+// TLS extension numbers.
 const (
 	ExtensionServerName              uint16 = 0
 	ExtensionStatusRequest           uint16 = 5
@@ -58,7 +58,7 @@ const (
 	ExtensionEncryptedClientHello    uint16 = 0xfe0d
 )
 
-// TLS signaling cipher suite values
+// TLS signaling cipher suite values.
 const (
 	scsvRenegotiation uint16 = 0x00ff
 )
@@ -105,7 +105,7 @@ const (
 	PointFormatUncompressed uint8 = 0
 )
 
-// TLS CertificateStatusType (RFC 3546)
+// TLS CertificateStatusType (RFC 3546).
 const (
 	StatusTypeOCSP uint8 = 1
 )

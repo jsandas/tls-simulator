@@ -15,7 +15,7 @@ const (
 	nginxBadAddr  = "localhost:8443"
 )
 
-// TestSetup ensures the docker containers are running
+// TestSetup ensures the docker containers are running.
 func TestSetup(t *testing.T) {
 	// Start docker-compose services
 	cmd := exec.Command("docker", "compose", "up", "-d")
@@ -32,7 +32,7 @@ func TestSetup(t *testing.T) {
 	t.Log("Docker services started successfully")
 }
 
-// TestTLS13WithChacha20Poly1305 tests TLS 1.3 with specific cipher suite
+// TestTLS13WithChacha20Poly1305 tests TLS 1.3 with specific cipher suite.
 func TestTLS13WithChacha20Poly1305(t *testing.T) {
 	// Define specific cipher suite for TLS 1.3
 	ciphers := []uint16{
@@ -97,7 +97,7 @@ func TestTLS13WithChacha20Poly1305(t *testing.T) {
 	t.Logf("Curve: 0x%04x", result.CurveID)
 }
 
-// TestTLS13WithDefaultCiphers tests TLS 1.3 with default cipher suites
+// TestTLS13WithDefaultCiphers tests TLS 1.3 with default cipher suites.
 func TestTLS13WithDefaultCiphers(t *testing.T) {
 	// Use empty cipher list to trigger default ciphers
 	var ciphers []uint16
@@ -159,7 +159,7 @@ func TestTLS13WithDefaultCiphers(t *testing.T) {
 	t.Logf("Curve: 0x%04x", result.CurveID)
 }
 
-// TestTLS12WithECDHE tests TLS 1.2 with ECDHE cipher suites
+// TestTLS12WithECDHE tests TLS 1.2 with ECDHE cipher suites.
 func TestTLS12WithECDHE(t *testing.T) {
 	// Define ECDHE cipher suites for TLS 1.2
 	ciphers := []uint16{
@@ -226,7 +226,7 @@ func TestTLS12WithECDHE(t *testing.T) {
 	t.Logf("Curve: 0x%04x", result.CurveID)
 }
 
-// TestTLS12WithDHE tests TLS 1.2 with DHE cipher suites
+// TestTLS12WithDHE tests TLS 1.2 with DHE cipher suites.
 func TestTLS12WithDHE(t *testing.T) {
 	// Define DHE cipher suites for TLS 1.2
 	ciphers := []uint16{
@@ -277,7 +277,7 @@ func TestTLS12WithDHE(t *testing.T) {
 	t.Logf("Curve: 0x%04x", result.CurveID)
 }
 
-// TestNginxBadContainer tests connection to the nginx_bad container
+// TestNginxBadContainer tests connection to the nginx_bad container.
 func TestNginxBadContainer(t *testing.T) {
 	// Define cipher suites
 	ciphers := []uint16{
@@ -319,7 +319,7 @@ func TestNginxBadContainer(t *testing.T) {
 	t.Logf("Curve: 0x%04x", result.CurveID)
 }
 
-// TestMultipleCurves tests that different curves can be negotiated
+// TestMultipleCurves tests that different curves can be negotiated.
 func TestMultipleCurves(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -393,7 +393,7 @@ func TestMultipleCurves(t *testing.T) {
 	}
 }
 
-// TestCleanup stops the docker containers
+// TestCleanup stops the docker containers.
 func TestCleanup(t *testing.T) {
 	// Stop docker-compose services
 	cmd := exec.Command("docker", "compose", "down")

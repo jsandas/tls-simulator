@@ -78,14 +78,15 @@ type ClientHelloMsg struct {
 	Extensions []uint16
 }
 
+//nolint:gocyclo
 func (m *ClientHelloMsg) MarshalMsg(echInner bool) ([]byte, error) {
 	var exts cryptobyte.Builder
-	if len(m.ServerName) > 0 {
+	if m.ServerName != "" {
 		// RFC 6066, Section 3
 		exts.AddUint16(ExtensionServerName)
 		exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
 			exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
-				exts.AddUint8(0) // name_type = host_name
+				exts.AddUint8(0) // name_type is host_name
 				exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
 					exts.AddBytes([]byte(m.ServerName))
 				})
@@ -157,7 +158,7 @@ func (m *ClientHelloMsg) MarshalMsg(echInner bool) ([]byte, error) {
 		} else {
 			exts.AddUint16(ExtensionStatusRequest)
 			exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
-				exts.AddUint8(1)  // status_type = ocsp
+				exts.AddUint8(1)  // status_type is ocsp
 				exts.AddUint16(0) // empty responder_id_list
 				exts.AddUint16(0) // empty request_extensions
 			})
@@ -349,6 +350,7 @@ func (m *ClientHelloMsg) MarshalMsg(echInner bool) ([]byte, error) {
 	return b.Bytes()
 }
 
+//nolint:gocyclo
 func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 	*m = ClientHelloMsg{original: data}
 	s := cryptobyte.String(data)
@@ -423,7 +425,7 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 				if nameType != 0 {
 					continue
 				}
-				if len(m.ServerName) != 0 {
+				if m.ServerName != "" {
 					// Multiple names of the same name_type are prohibited.
 					return false
 				}
@@ -640,6 +642,7 @@ type ServerHelloMsg struct {
 	SelectedGroup CurveID
 }
 
+//nolint:gocyclo
 func (m *ServerHelloMsg) Marshal() ([]byte, error) {
 	var exts cryptobyte.Builder
 	if m.OcspStapling {
@@ -662,7 +665,7 @@ func (m *ServerHelloMsg) Marshal() ([]byte, error) {
 		exts.AddUint16(ExtensionExtendedMasterSecret)
 		exts.AddUint16(0) // empty extension_data
 	}
-	if len(m.AlpnProtocol) > 0 {
+	if m.AlpnProtocol != "" {
 		exts.AddUint16(ExtensionALPN)
 		exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
 			exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
@@ -765,11 +768,11 @@ func (m *ServerHelloMsg) Marshal() ([]byte, error) {
 	return b.Bytes()
 }
 
+//nolint:gocyclo
 func (m *ServerHelloMsg) Unmarshal(data []byte) bool {
 	*m = ServerHelloMsg{Original: data}
 	s := cryptobyte.String(data)
 
-	// fmt.Printf("Unmarshalling ServerHello: \n%x\n\n", data)
 	if !s.Skip(4) || // message type and uint24 length field
 		!s.ReadUint16(&m.Vers) || !s.ReadBytes(&m.Random, 32) ||
 		!readUint8LengthPrefixed(&s, &m.SessionId) ||
@@ -906,12 +909,26 @@ type ServerKeyExchangeMsg struct {
 }
 
 func (m *ServerKeyExchangeMsg) Marshal() ([]byte, error) {
-	length := len(m.Key)
-	x := make([]byte, length+4)
+	keyLen := len(m.Key)
+
+	// Check if length exceeds maximum allowed size (2^24 - 1 for TLS record)
+	// Do this check with ints to avoid any conversions
+	if keyLen > 0xFFFFFF {
+		return nil, fmt.Errorf("ServerKeyExchange message too long: %d bytes", keyLen)
+	}
+
+	x := make([]byte, keyLen+4)
 	x[0] = TypeServerKeyExchange
-	x[1] = uint8(length >> 16)
-	x[2] = uint8(length >> 8)
-	x[3] = uint8(length)
+
+	// Since we verified keyLen <= 0xFFFFFF (fits in 24 bits)
+	// these operations are safe as they only access the low 24 bits
+	b1 := byte((keyLen >> 16) & 0xFF) // highest byte, bits 16-23
+	b2 := byte((keyLen >> 8) & 0xFF)  // middle byte, bits 8-15
+	b3 := byte(keyLen & 0xFF)         // lowest byte, bits 0-7
+
+	x[1] = b1
+	x[2] = b2
+	x[3] = b3
 	copy(x[4:], m.Key)
 
 	return x, nil
@@ -925,7 +942,9 @@ func (m *ServerKeyExchangeMsg) Unmarshal(data []byte) bool {
 	return true
 }
 
-// GetKey returns the key exchange data
+// GetKey returns the key exchange data.
+//
+//nolint:gocyclo
 func (m *ServerKeyExchangeMsg) GetKey() error {
 	key := m.Key
 	if len(key) < 4 {

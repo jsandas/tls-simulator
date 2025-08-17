@@ -2,9 +2,10 @@ run:
   timeout: 5m
   go: "1.24"
   modules-download-mode: readonly
+  # Global Go version for all linters
 
 # This is the version of golangci-lint configuration
-version: 2
+# version: 2  # Commented out for v1 compatibility
 
 linters:
   enable:
@@ -68,6 +69,7 @@ linters-settings:
     prefix: "log"
   govet:
     check-shadowing: true
+  staticcheck: {}
   ineffassign:
     check-blank: true
   misspell:
@@ -84,8 +86,6 @@ linters-settings:
   rowserrcheck:
     packages:
       - database/sql
-  staticcheck:
-    go: "1.24"
   unconvert:
     fast: true
   unparam:
