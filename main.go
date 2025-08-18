@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -161,6 +163,18 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 		return nil, fmt.Errorf("connection failed: %v", err)
 	}
 	defer conn.Close()
+
+	// Get the port for STARTTLS check
+	_, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid address format: %v", err)
+	}
+
+	// Attempt STARTTLS if needed for this port
+	ctx := context.Background()
+	if err := ftls.StartTLS(ctx, conn, port); err != nil && !errors.Is(err, ftls.ErrUnsupportedProtocol) {
+		return nil, fmt.Errorf("STARTTLS negotiation failed: %v", err)
+	}
 
 	// Set write deadline and send ClientHello
 	if err := conn.SetWriteDeadline(time.Now().Add(2 * time.Second)); err != nil {

@@ -8,3 +8,22 @@ services:
     image: ghcr.io/jsandas/nginx_bad
     ports:
       - "8443:443"
+
+  postfix_bad:
+    image: ghcr.io/jsandas/postfix_bad
+    ports:
+      - "25:25"
+      - "587:587"
+    environment:
+      - maildomain=mail.example.com
+      - smtp_user=user:pwd
+
+  # mariadb_good:
+  #   image: ghcr.io/jsandas/mariadb_good
+  #   ports:
+  #     - "3306:3306"
+  #   environment:
+  #     - MARIADB_ROOT_PASSWORD=root123
+  #     - MARIADB_DATABASE=testdb
+  #     - MARIADB_USER=test
+  #     - MARIADB_PASSWORD=test123
