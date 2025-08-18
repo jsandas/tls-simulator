@@ -181,7 +181,7 @@ func (p *ftpProtocol) Name() string {
 	return p.name
 }
 
-// MySQL protocol implementation
+// MySQL protocol implementation.
 type mysqlProtocol struct {
 	name string
 }
