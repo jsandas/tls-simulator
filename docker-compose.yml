@@ -18,12 +18,12 @@ services:
       - maildomain=mail.example.com
       - smtp_user=user:pwd
 
-  # mariadb_good:
-  #   image: ghcr.io/jsandas/mariadb_good
-  #   ports:
-  #     - "3306:3306"
-  #   environment:
-  #     - MARIADB_ROOT_PASSWORD=root123
-  #     - MARIADB_DATABASE=testdb
-  #     - MARIADB_USER=test
-  #     - MARIADB_PASSWORD=test123
+  mariadb_good:
+    image: ghcr.io/jsandas/mariadb_good
+    ports:
+      - "3306:3306"
+    environment:
+      - MARIADB_ROOT_PASSWORD=root123
+      - MARIADB_DATABASE=testdb
+      - MARIADB_USER=test
+      - MARIADB_PASSWORD=test123

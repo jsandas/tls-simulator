@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"regexp"
 	"strings"
@@ -180,6 +181,119 @@ func (p *ftpProtocol) Name() string {
 	return p.name
 }
 
+// MySQL protocol implementation
+type mysqlProtocol struct {
+	name string
+}
+
+func newMySQLProtocol() *mysqlProtocol {
+	return &mysqlProtocol{
+		name: "mysql",
+	}
+}
+
+func (p *mysqlProtocol) Handshake(ctx context.Context, rw *bufio.ReadWriter) error {
+	// Read initial handshake packet header
+	header := make([]byte, 4)
+	if _, err := io.ReadFull(rw.Reader, header); err != nil {
+		return fmt.Errorf("mysql: failed to read packet header: %w", err)
+	}
+
+	// Get packet length (3 bytes, little-endian)
+	length := int(uint32(header[0]) | uint32(header[1])<<8 | uint32(header[2])<<16)
+
+	// Read the packet body
+	body := make([]byte, length)
+	if _, err := io.ReadFull(rw.Reader, body); err != nil {
+		return fmt.Errorf("mysql: failed to read packet body: %w", err)
+	}
+
+	// Check protocol version (should be 10)
+	if body[0] != 10 {
+		return fmt.Errorf("mysql: unsupported protocol version: %d", body[0])
+	}
+
+	// Skip server version string (null-terminated)
+	pos := 1
+	for pos < len(body) && body[pos] != 0 {
+		pos++
+	}
+	pos++ // skip null terminator
+
+	// Skip thread ID (4 bytes)
+	pos += 4
+
+	// Skip auth plugin data part 1 (8 bytes + null terminator)
+	pos += 8
+	for pos < len(body) && body[pos] != 0 {
+		pos++
+	}
+	pos++
+
+	// Skip filler (1 byte)
+	pos++
+
+	// Read capability flags (lower 2 bytes)
+	if pos+2 > len(body) {
+		return fmt.Errorf("mysql: packet too short for capability flags")
+	}
+	capabilities := uint32(body[pos]) | uint32(body[pos+1])<<8
+
+	// Check if server supports SSL
+	const CLIENT_SSL = 0x800
+	if capabilities&CLIENT_SSL == 0 {
+		return fmt.Errorf("%w: MySQL server does not support SSL", ErrStartTLSNotSupported)
+	}
+
+	// Send SSL request packet with minimum required capabilities
+	const (
+		CLIENT_PROTOCOL_41       = 0x00000200
+		CLIENT_SECURE_CONNECTION = 0x00008000
+	)
+	clientFlags := uint32(CLIENT_SSL | CLIENT_PROTOCOL_41 | CLIENT_SECURE_CONNECTION)
+
+	sslRequest := make([]byte, 4+32) // Header + SSL request packet
+	// Packet header (4 bytes)
+	sslRequest[0] = 32 // payload length
+	sslRequest[1] = 0
+	sslRequest[2] = 0
+	sslRequest[3] = 1 // sequence number
+
+	// Client flags (4 bytes)
+	sslRequest[4] = byte(clientFlags)
+	sslRequest[5] = byte(clientFlags >> 8)
+	sslRequest[6] = byte(clientFlags >> 16)
+	sslRequest[7] = byte(clientFlags >> 24)
+
+	// Max packet size (4 bytes)
+	maxPacketSize := uint32(16777215)
+	sslRequest[8] = byte(maxPacketSize)
+	sslRequest[9] = byte(maxPacketSize >> 8)
+	sslRequest[10] = byte(maxPacketSize >> 16)
+	sslRequest[11] = byte(maxPacketSize >> 24)
+
+	// Character set (1 byte)
+	sslRequest[12] = 33 // utf8_general_ci
+
+	// Reserved (23 bytes)
+	for i := 13; i < 36; i++ {
+		sslRequest[i] = 0
+	}
+
+	if _, err := rw.Write(sslRequest); err != nil {
+		return fmt.Errorf("mysql: failed to write SSL request: %w", err)
+	}
+	if err := rw.Flush(); err != nil {
+		return fmt.Errorf("mysql: failed to flush SSL request: %w", err)
+	}
+
+	return nil
+}
+
+func (p *mysqlProtocol) Name() string {
+	return p.name
+}
+
 // Helper functions.
 func expectGreeting(ctx context.Context, rw *bufio.ReadWriter, pattern *regexp.Regexp) error {
 	for {
@@ -241,11 +355,12 @@ func readLine(ctx context.Context, r *bufio.Reader) (string, error) {
 
 // Protocol registry.
 var protocols = map[string]func() StartTLSProtocol{
-	"21":  func() StartTLSProtocol { return newFTPProtocol() },
-	"25":  func() StartTLSProtocol { return newSMTPProtocol() },
-	"587": func() StartTLSProtocol { return newSMTPProtocol() },
-	"110": func() StartTLSProtocol { return newPOP3Protocol() },
-	"143": func() StartTLSProtocol { return newIMAPProtocol() },
+	"21":   func() StartTLSProtocol { return newFTPProtocol() },
+	"25":   func() StartTLSProtocol { return newSMTPProtocol() },
+	"587":  func() StartTLSProtocol { return newSMTPProtocol() },
+	"110":  func() StartTLSProtocol { return newPOP3Protocol() },
+	"143":  func() StartTLSProtocol { return newIMAPProtocol() },
+	"3306": func() StartTLSProtocol { return newMySQLProtocol() },
 }
 
 // StartTLS initiates a STARTTLS handshake for supported protocols.

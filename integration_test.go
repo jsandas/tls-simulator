@@ -509,64 +509,64 @@ func TestPostfixPort587STARTTLS(t *testing.T) {
 }
 
 // TestMariaDBTLS tests TLS connection to MariaDB.
-// func TestMariaDBTLS(t *testing.T) {
-// 	// Define cipher suites for TLS 1.2 (MariaDB commonly uses TLS 1.2)
-// 	ciphers := []uint16{
-// 		ftls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-// 		ftls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-// 		ftls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-// 		// Include some fallback ciphers that MariaDB might use
-// 		ftls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
-// 		ftls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-// 	}
+func TestMariaDBTLS(t *testing.T) {
+	// Define cipher suites for TLS 1.2 (MariaDB commonly uses TLS 1.2)
+	ciphers := []uint16{
+		ftls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+		ftls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+		ftls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+		// Include some fallback ciphers that MariaDB might use
+		ftls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
+		ftls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+	}
 
-// 	// Define elliptic curves
-// 	curves := []ftls.CurveID{
-// 		ftls.X25519,
-// 		ftls.CurveP256,
-// 		ftls.CurveP384,
-// 	}
+	// Define elliptic curves
+	curves := []ftls.CurveID{
+		ftls.X25519,
+		ftls.CurveP256,
+		ftls.CurveP384,
+	}
 
-// 	// Perform TLS handshake
-// 	result, err := PerformTLSHandshake(
-// 		tls.VersionTLS12,
-// 		ciphers,
-// 		curves,
-// 		mariadbGoodAddr,
-// 	)
+	// Perform TLS handshake
+	result, err := PerformTLSHandshake(
+		tls.VersionTLS12,
+		ciphers,
+		curves,
+		mariadbGoodAddr,
+	)
 
-// 	if err != nil {
-// 		t.Fatalf("TLS handshake failed: %v", err)
-// 	}
+	if err != nil {
+		t.Fatalf("TLS handshake failed: %v", err)
+	}
 
-// 	// Verify results
-// 	if result.ServerHello == nil {
-// 		t.Fatal("ServerHello is nil")
-// 	}
+	// Verify results
+	if result.ServerHello == nil {
+		t.Fatal("ServerHello is nil")
+	}
 
-// 	// Check protocol version
-// 	if result.Protocol != int(tls.VersionTLS12) {
-// 		t.Errorf("Expected protocol version %d, got %d", tls.VersionTLS12, result.Protocol)
-// 	}
+	// Check protocol version
+	if result.Protocol != int(tls.VersionTLS12) {
+		t.Errorf("Expected protocol version %d, got %d", tls.VersionTLS12, result.Protocol)
+	}
 
-// 	// Verify cipher suite is one of the offered ones
-// 	validCipher := false
-// 	for _, cipher := range ciphers {
-// 		if result.Cipher == cipher {
-// 			validCipher = true
-// 			break
-// 		}
-// 	}
-// 	if !validCipher {
-// 		t.Errorf("Negotiated cipher 0x%04x is not one of the offered ciphers", result.Cipher)
-// 	}
+	// Verify cipher suite is one of the offered ones
+	validCipher := false
+	for _, cipher := range ciphers {
+		if result.Cipher == cipher {
+			validCipher = true
+			break
+		}
+	}
+	if !validCipher {
+		t.Errorf("Negotiated cipher 0x%04x is not one of the offered ciphers", result.Cipher)
+	}
 
-// 	// Log the successful connection details
-// 	t.Logf("MariaDB TLS handshake successful")
-// 	t.Logf("Protocol: %d", result.Protocol)
-// 	t.Logf("Cipher: 0x%04x", result.Cipher)
-// 	t.Logf("Curve: 0x%04x", result.CurveID)
-// }
+	// Log the successful connection details
+	t.Logf("MariaDB TLS handshake successful")
+	t.Logf("Protocol: %d", result.Protocol)
+	t.Logf("Cipher: 0x%04x", result.Cipher)
+	t.Logf("Curve: 0x%04x", result.CurveID)
+}
 
 // TestCleanup stops the docker containers.
 func TestCleanup(t *testing.T) {

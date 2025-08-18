@@ -148,6 +148,50 @@ func TestStartTLS(t *testing.T) {
 			expectedError: ErrStartTLSNotSupported,
 			timeout:       2 * time.Second,
 		},
+		{
+			name: "mysql success",
+			port: "3306",
+			serverMessages: []string{
+				string([]byte{
+					0x4a, 0x00, 0x00, 0x00, // Packet length (74 bytes) and sequence
+					0x0a,                          // Protocol version (10)
+					'5', '.', '7', '.', '0', 0x00, // Server version
+					0x01, 0x02, 0x03, 0x04, // Thread ID
+					'1', '2', '3', '4', '5', '6', '7', '8', 0x00, // Auth plugin data
+					0x00,       // Filler
+					0x08, 0x82, // Capability flags lower (includes SERVER_SSL 0x800)
+					0x21,       // Character set
+					0x02, 0x00, // Status flags
+					0x00, 0x00, // Capability flags upper
+					0x00,                                                       // Auth plugin data length
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Reserved
+				}),
+			},
+			timeout: 2 * time.Second,
+		},
+		{
+			name: "mysql ssl not supported",
+			port: "3306",
+			serverMessages: []string{
+				string([]byte{
+					0x4a, 0x00, 0x00, 0x00, // Packet length (74 bytes) and sequence
+					0x0a,                          // Protocol version (10)
+					'5', '.', '7', '.', '0', 0x00, // Server version
+					0x01, 0x02, 0x03, 0x04, // Thread ID
+					'1', '2', '3', '4', '5', '6', '7', '8', 0x00, // Auth plugin data
+					0x00,       // Filler
+					0x00, 0x82, // Capability flags lower (no SERVER_SSL flag)
+					0x21,       // Character set
+					0x02, 0x00, // Status flags
+					0x00, 0x00, // Capability flags upper
+					0x00,                                                       // Auth plugin data length
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Reserved
+				}),
+			},
+			expectError:   true,
+			expectedError: ErrStartTLSNotSupported,
+			timeout:       2 * time.Second,
+		},
 	}
 
 	for _, tt := range tests {
