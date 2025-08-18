@@ -17,7 +17,7 @@ const (
 
 // TestSetup ensures the docker containers are running.
 func TestSetup(t *testing.T) {
-	// Start docker-compose services
+	// Start docker compose services
 	cmd := exec.Command("docker", "compose", "up", "-d")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -395,7 +395,7 @@ func TestMultipleCurves(t *testing.T) {
 
 // TestCleanup stops the docker containers.
 func TestCleanup(t *testing.T) {
-	// Stop docker-compose services
+	// Stop docker compose services
 	cmd := exec.Command("docker", "compose", "down")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

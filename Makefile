@@ -15,7 +15,7 @@ test-unit:
 	@echo "No unit tests available yet - all tests are integration tests"
 	@echo "Use 'make test-integration' to run the integration tests"
 
-# Run integration tests (requires docker-compose)
+# Run integration tests (requires docker compose)
 test-integration: docker-up
 	@echo "Waiting for services to be ready..."
 	@sleep 5

@@ -8,9 +8,9 @@ set -e
 echo "=== TLS Simulator Integration Tests ==="
 echo
 
-# Check if docker-compose is available
-if ! command -v docker-compose &> /dev/null; then
-    echo "Error: docker-compose is not installed or not in PATH"
+# Check if docker compose is available
+if ! command -v docker compose &> /dev/null; then
+    echo "Error: docker compose is not installed or not in PATH"
     exit 1
 fi
 

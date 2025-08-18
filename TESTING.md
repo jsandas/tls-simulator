@@ -84,8 +84,8 @@ go test -v -run "^TestTLS13WithChacha20Poly1305$" .
 
 ### Setup and Cleanup
 
-7. **TestSetup**: Starts docker-compose services
-8. **TestCleanup**: Stops docker-compose services
+7. **TestSetup**: Starts docker compose services
+8. **TestCleanup**: Stops docker compose services
 
 ## Test Configuration
 
@@ -113,14 +113,14 @@ Each test validates:
    sudo lsof -i :8443
    ```
 
-2. **Docker containers not starting**: Check docker-compose logs
+2. **Docker containers not starting**: Check docker compose logs
    ```bash
-   docker-compose logs
+   docker compose logs
    ```
 
 3. **Tests timing out**: Increase wait time in tests or check container health
    ```bash
-   docker-compose ps
+   docker compose ps
    ```
 
 ### Debug Mode
