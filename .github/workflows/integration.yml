@@ -8,13 +8,6 @@ on:
       - "**/go.mod"
       - "**/go.sum"
       - "./github/workflows/integration.yml"
-  push:
-    branches: [ main ]
-    paths:
-      - "**/*.go"
-      - "**/go.mod"
-      - "**/go.sum"
-      - "./github/workflows/integration.yml"
 
 jobs:
   test:
