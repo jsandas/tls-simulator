@@ -3,8 +3,18 @@ name: Integration Tests
 on:
   pull_request:
     branches: [ main ]
+    paths:
+      - "**/*.go"
+      - "**/go.mod"
+      - "**/go.sum"
+      - "./github/workflows/integration.yml"
   push:
     branches: [ main ]
+    paths:
+      - "**/*.go"
+      - "**/go.mod"
+      - "**/go.sum"
+      - "./github/workflows/integration.yml"
 
 jobs:
   test:
@@ -23,8 +33,6 @@ jobs:
         
     - name: Set up Docker
       uses: docker/setup-docker-action@v4
-      with:
-        docker-compose: true
         
     - name: Build the application
       run: |
