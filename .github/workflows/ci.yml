@@ -90,8 +90,6 @@ jobs:
         
     - name: Set up Docker
       uses: docker/setup-docker-action@v4
-      with:
-        docker-compose: true
         
     - name: Build the application
       run: |
