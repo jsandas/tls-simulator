@@ -1,2 +1,8 @@
+github.com/jsandas/starttls-go v1.0.0 h1:Ig7KEWDQqJpBmUnZeQGJBUgiGSkc0jYyVeMaBRheiPQ=
+github.com/jsandas/starttls-go v1.0.0/go.mod h1:8rDGnKnQzjlklSUrFapPjIruWb32Zi6Mq7sZrJ3XKHs=
+github.com/jsandas/starttls-go v1.0.1 h1:DTCil8+gxVnJlUfJhmfxJMkw6tdIRNRIwKg4rfX6cms=
+github.com/jsandas/starttls-go v1.0.1/go.mod h1:8rDGnKnQzjlklSUrFapPjIruWb32Zi6Mq7sZrJ3XKHs=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 h1:7I4JAnoQBe7ZtJcBaYHi5UtiO8tQHbUSXxL+pnGRANg=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
+golang.org/x/crypto v0.41.0 h1:WKYxWedPGCTVVl5+WHSSrOBT0O8lx32+zxmHxijgXp4=
+golang.org/x/crypto v0.41.0/go.mod h1:pO5AFd7FA68rFak7rOAGVuygIISepHftHnr8dr6+sUc=
