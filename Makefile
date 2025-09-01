@@ -12,14 +12,13 @@ test: quality test-integration
 
 # Run unit tests only
 test-unit:
-	@echo "No unit tests available yet - all tests are integration tests"
-	@echo "Use 'make test-integration' to run the integration tests"
+	@go test -v ./...
 
 # Run integration tests (requires docker compose)
 test-integration: docker-up
 	@echo "Waiting for services to be ready..."
 	@sleep 5
-	go test -v -run "^Test(Setup|TLS|Nginx|Multiple|Cleanup)" .
+	go test -v -run -tags integration ./...
 	@$(MAKE) docker-down
 
 # Run specific integration test
@@ -68,6 +67,14 @@ fmt-check:
 		exit 1; \
 	fi
 	@echo "Code formatting is correct"
+
+go-mod-tidy:
+	@go mod tidy
+	@if [ -n "$(shell git status --porcelain | egrep '(go.mod|go.sum)')" ]; then \
+		echo "go.mod or go.sum is not tidy. Please run 'go mod tidy'"; \
+		exit 1; \
+	fi
+	@echo "go.mod and go.sum are tidy"
 
 # Format code
 fmt:
