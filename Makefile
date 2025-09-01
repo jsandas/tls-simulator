@@ -18,7 +18,7 @@ test-unit:
 test-integration: docker-up
 	@echo "Waiting for services to be ready..."
 	@sleep 5
-	go test -v -run -tags integration ./...
+	go test -v -tags integration ./...
 	@$(MAKE) docker-down
 
 # Run specific integration test
