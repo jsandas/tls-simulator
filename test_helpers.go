@@ -111,7 +111,7 @@ func ValidateTLS13Cipher(result *TLSHandshakeResult) error {
 
 // GetCipherName returns a human-readable name for a cipher suite.
 func GetCipherName(cipher uint16) string {
-	if name, exists := cipherToName[cipher]; exists {
+	if name, exists := ftls.CipherToName[cipher]; exists {
 		return name
 	}
 	return fmt.Sprintf("0x%04x", cipher)
@@ -119,7 +119,7 @@ func GetCipherName(cipher uint16) string {
 
 // GetCurveName returns a human-readable name for a curve ID.
 func GetCurveName(curve ftls.CurveID) string {
-	if name, exists := curveIDToName[curve]; exists {
+	if name, exists := ftls.CurveIDToName[curve]; exists {
 		return name
 	}
 	return fmt.Sprintf("0x%04x", curve)
@@ -127,7 +127,7 @@ func GetCurveName(curve ftls.CurveID) string {
 
 // GetProtocolName returns a human-readable name for a protocol version.
 func GetProtocolName(protocol int) string {
-	if name, exists := protocolToName[protocol]; exists {
+	if name, exists := ftls.ProtocolToName[protocol]; exists {
 		return name
 	}
 	return fmt.Sprintf("%d", protocol)

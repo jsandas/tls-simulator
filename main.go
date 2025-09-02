@@ -62,7 +62,7 @@ func buildClientHello(protocolVer uint16, ciphers []uint16, curves []ftls.CurveI
 	}
 
 	if len(curves) == 0 {
-		clientMsg.SupportedCurves = defaultCurves
+		clientMsg.SupportedCurves = ftls.DefaultCurves
 	}
 
 	return clientMsg
