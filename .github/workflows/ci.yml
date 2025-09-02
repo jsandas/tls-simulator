@@ -9,7 +9,7 @@ on:
       - "**/*.go"
       - "**/go.mod"
       - "**/go.sum"
-      - "./github/workflows/ci-tests.yml"
+      - "./github/workflows/ci.yml"
 
 jobs:
   lint:
