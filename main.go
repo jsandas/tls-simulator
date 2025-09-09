@@ -117,7 +117,8 @@ func parseServerResponse(serverHelloBytes, serverKeyExchangeBytes []byte) (*TLSH
 			return nil, fmt.Errorf("failed to unmarshal ServerKeyExchange")
 		}
 
-		if err := serverKeyExchange.GetKey(); err != nil {
+		err := serverKeyExchange.GetKey()
+		if err != nil {
 			result.Error = fmt.Errorf("failed to parse ServerKeyExchange: %v", err)
 		} else {
 			result.ServerHello.ServerShare.Group = serverKeyExchange.CurveID
@@ -175,20 +176,26 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 
 	// Attempt STARTTLS if needed for this port
 	ctx := context.Background()
-	if err := starttls.StartTLS(ctx, conn, port); err != nil && !errors.Is(err, starttls.ErrUnsupportedProtocol) {
+
+	err = starttls.StartTLS(ctx, conn, port)
+	if err != nil && !errors.Is(err, starttls.ErrUnsupportedProtocol) {
 		return nil, fmt.Errorf("STARTTLS negotiation failed: %v", err)
 	}
 
 	// Set write deadline and send ClientHello
-	if err := conn.SetWriteDeadline(time.Now().Add(2 * time.Second)); err != nil {
+	err = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+	if err != nil {
 		return nil, fmt.Errorf("failed to set write deadline: %v", err)
 	}
-	if _, err := conn.Write(clientHello); err != nil {
+
+	_, err = conn.Write(clientHello)
+	if err != nil {
 		return nil, fmt.Errorf("failed to write ClientHello: %v", err)
 	}
 
 	// Set read deadline and read response
-	if err := conn.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+	err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if err != nil {
 		return nil, fmt.Errorf("failed to set read deadline: %v", err)
 	}
 
