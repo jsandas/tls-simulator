@@ -80,16 +80,8 @@ go-mod-tidy:
 fmt:
 	gofmt -s -w .
 
-# Check go mod tidy
-mod-check:
-	@echo "Checking go.mod and go.sum..."
-	@git diff --quiet go.mod go.sum || (echo "go.mod or go.sum has uncommitted changes. Please commit them first." && exit 1)
-	go mod tidy
-	@git diff --quiet go.mod go.sum || (echo "go.mod or go.sum is not tidy. Please run 'go mod tidy' and commit changes." && git diff go.mod go.sum && exit 1)
-	@echo "Go modules are tidy"
-
 # Run all code quality checks
-quality: fmt-check mod-check lint
+quality: fmt-check go-mod-tidy lint
 	@echo "All code quality checks passed!"
 
 # Run example
