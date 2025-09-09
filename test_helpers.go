@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -33,8 +34,13 @@ func DefaultTestConfig() TestConfig {
 func WaitForServer(addr string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
+		dialer := &net.Dialer{}
+
+		conn, err := dialer.DialContext(ctx, "tcp", addr)
 		if err == nil {
 			cerr := conn.Close()
 			if cerr != nil {

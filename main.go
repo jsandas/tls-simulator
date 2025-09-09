@@ -164,7 +164,12 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16,
 }
 
 func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
-	conn, err := net.DialTimeout("tcp", addr, 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	dialer := &net.Dialer{}
+
+	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("connection failed: %v", err)
 	}
@@ -177,7 +182,7 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 	}
 
 	// Attempt STARTTLS if needed for this port
-	ctx := context.Background()
+	ctx = context.Background()
 
 	err = starttls.StartTLS(ctx, conn, port)
 	if err != nil && !errors.Is(err, starttls.ErrUnsupportedProtocol) {
