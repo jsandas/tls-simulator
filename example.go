@@ -28,15 +28,19 @@ func main() {
 
 	fmt.Printf("=== TLS Handshake Result ===\n")
 	fmt.Printf("ServerHello: %+v\n", result.ServerHello)
+
 	if result.Protocol != 0 {
 		fmt.Printf("Protocol Version: %d : %s\n", result.Protocol, ftls.ProtocolToName[result.Protocol])
 	}
+
 	if result.Cipher != 0 {
 		fmt.Printf("Cipher Suite: 0x%04x : %s\n", result.Cipher, ftls.CipherToName[result.Cipher])
 	}
+
 	if result.CurveID != 0 {
 		fmt.Printf("Curve ID: 0x%04x : %s\n", result.CurveID, ftls.CurveIDToName[result.CurveID])
 	}
+
 	if result.Error != nil {
 		fmt.Printf("Error: %v\n", result.Error)
 	}
@@ -56,15 +60,19 @@ func main() {
 
 	fmt.Printf("\n=== TLS 1.3 Handshake Result ===\n")
 	fmt.Printf("ServerHello: %+v\n", result2.ServerHello)
+
 	if result2.Protocol != 0 {
 		fmt.Printf("Protocol Version: %d : %s\n", result2.Protocol, ftls.ProtocolToName[result2.Protocol])
 	}
+
 	if result2.Cipher != 0 {
 		fmt.Printf("Cipher Suite: 0x%04x : %s\n", result2.Cipher, ftls.CipherToName[result2.Cipher])
 	}
+
 	if result2.CurveID != 0 {
 		fmt.Printf("Curve ID: 0x%04x : %s\n", result2.CurveID, ftls.CurveIDToName[result2.CurveID])
 	}
+
 	if result2.Error != nil {
 		fmt.Printf("Error: %v\n", result2.Error)
 	}

@@ -46,11 +46,13 @@ func TestFinishedMsg(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Test Marshal
 			msg := &FinishedMsg{verifyData: tt.verifyData}
+
 			got, err := msg.Marshal()
 			if (err != nil) != tt.wantError {
 				t.Errorf("Marshal() error = %v, wantError %v", err, tt.wantError)
 				return
 			}
+
 			if !tt.wantError {
 				if string(got) != string(tt.wantBytes) {
 					t.Errorf("Marshal() = %v, want %v", got, tt.wantBytes)
@@ -64,6 +66,7 @@ func TestFinishedMsg(t *testing.T) {
 					t.Error("Unmarshal() returned false")
 					return
 				}
+
 				if string(unmarshalMsg.verifyData) != string(tt.verifyData) {
 					t.Errorf("Unmarshal() verifyData = %v, want %v", unmarshalMsg.verifyData, tt.verifyData)
 				}
@@ -176,6 +179,7 @@ func TestServerHelloMsg(t *testing.T) {
 					t.Errorf("Marshal() error = %v", err)
 					return
 				}
+
 				if string(got) != string(tt.wantBytes) {
 					t.Errorf("Marshal() = %v, want %v", got, tt.wantBytes)
 				}
@@ -183,6 +187,7 @@ func TestServerHelloMsg(t *testing.T) {
 
 			// Test Unmarshal
 			msg := new(ServerHelloMsg)
+
 			success := msg.Unmarshal(tt.wantBytes)
 			if success == tt.wantUnmarshalErr {
 				t.Errorf("Unmarshal() = %v, want %v", success, !tt.wantUnmarshalErr)
@@ -194,15 +199,19 @@ func TestServerHelloMsg(t *testing.T) {
 				if msg.Vers != tt.msg.Vers {
 					t.Errorf("Unmarshal() version = %v, want %v", msg.Vers, tt.msg.Vers)
 				}
+
 				if string(msg.Random) != string(tt.msg.Random) {
 					t.Errorf("Unmarshal() random = %v, want %v", msg.Random, tt.msg.Random)
 				}
+
 				if string(msg.SessionId) != string(tt.msg.SessionId) {
 					t.Errorf("Unmarshal() sessionId = %v, want %v", msg.SessionId, tt.msg.SessionId)
 				}
+
 				if msg.CipherSuite != tt.msg.CipherSuite {
 					t.Errorf("Unmarshal() cipherSuite = %v, want %v", msg.CipherSuite, tt.msg.CipherSuite)
 				}
+
 				if msg.CompressionMethod != tt.msg.CompressionMethod {
 					t.Errorf("Unmarshal() compressionMethod = %v, want %v", msg.CompressionMethod, tt.msg.CompressionMethod)
 				}
@@ -337,8 +346,10 @@ func TestServerKeyExchangeMsgGetKey(t *testing.T) {
 				if err == nil {
 					t.Error("GetKey() expected error but got nil")
 				}
+
 				return
 			}
+
 			if err != nil {
 				t.Errorf("GetKey() unexpected error: %v", err)
 				return
@@ -348,9 +359,11 @@ func TestServerKeyExchangeMsgGetKey(t *testing.T) {
 			if m.KeyType != tt.wantType {
 				t.Errorf("KeyType = %v, want %v", m.KeyType, tt.wantType)
 			}
+
 			if m.KeySize != tt.wantSize {
 				t.Errorf("KeySize = %v, want %v", m.KeySize, tt.wantSize)
 			}
+
 			if m.CurveID != tt.wantCurveID {
 				t.Errorf("CurveID = %v, want %v", m.CurveID, tt.wantCurveID)
 			}
