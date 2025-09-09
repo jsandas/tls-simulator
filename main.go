@@ -104,6 +104,7 @@ func parseServerResponse(serverHelloBytes, serverKeyExchangeBytes []byte) (*TLSH
 	} else {
 		result.Protocol = int(serverHello.Vers)
 	}
+
 	result.Cipher = serverHello.CipherSuite
 
 	if serverHello.ServerShare.Group != 0 {
@@ -135,6 +136,7 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.Cur
 	}
 
 	clientMsg := buildClientHello(protocolVer, ciphers, curves, sniHost)
+
 	clientHello, err := clientMsg.MarshalMsg(false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal ClientHello: %v", err)
@@ -191,6 +193,7 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 	}
 
 	var resp []byte
+
 	buffer := make([]byte, 4096)
 
 	for {
@@ -208,6 +211,7 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 			if isTimeoutError(err) {
 				return nil, fmt.Errorf("read timeout: %v", err)
 			}
+
 			return nil, fmt.Errorf("read error: %v", err)
 		}
 	}
@@ -218,6 +222,7 @@ func isTimeoutError(err error) bool {
 	if err, ok := err.(net.Error); ok {
 		return err.Timeout()
 	}
+
 	return false
 }
 
@@ -226,10 +231,12 @@ func getHandshakeMessages(data []byte) (serverHello, serverKeyExchange []byte, e
 	for i+5 <= len(data) {
 		// Parse TLS record header
 		contentType := data[i]
+
 		length := int(binary.BigEndian.Uint16(data[i+3 : i+5]))
 		if i+5+length > len(data) {
 			break // Malformed record
 		}
+
 		recordPayload := data[i+5 : i+5+length]
 
 		if contentType == 0x16 { // Handshake
@@ -249,6 +256,7 @@ func getHandshakeMessages(data []byte) (serverHello, serverKeyExchange []byte, e
 				if handshakeLen < 0 || j+4+handshakeLen > len(recordPayload) {
 					break // Malformed handshake message
 				}
+
 				handshakeMessage := recordPayload[j : j+4+handshakeLen]
 
 				switch handshakeType {
@@ -261,9 +269,11 @@ func getHandshakeMessages(data []byte) (serverHello, serverKeyExchange []byte, e
 						serverKeyExchange = handshakeMessage
 					}
 				}
+
 				j += 4 + handshakeLen
 			}
 		}
+
 		i += 5 + length
 	}
 

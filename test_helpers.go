@@ -39,8 +39,10 @@ func WaitForServer(addr string, timeout time.Duration) error {
 			if cerr := conn.Close(); cerr != nil {
 				return fmt.Errorf("failed to close connection: %v", cerr)
 			}
+
 			return nil
 		}
+
 		time.Sleep(500 * time.Millisecond)
 	}
 
@@ -114,6 +116,7 @@ func GetCipherName(cipher uint16) string {
 	if name, exists := ftls.CipherToName[cipher]; exists {
 		return name
 	}
+
 	return fmt.Sprintf("0x%04x", cipher)
 }
 
@@ -122,6 +125,7 @@ func GetCurveName(curve ftls.CurveID) string {
 	if name, exists := ftls.CurveIDToName[curve]; exists {
 		return name
 	}
+
 	return fmt.Sprintf("0x%04x", curve)
 }
 
@@ -130,5 +134,6 @@ func GetProtocolName(protocol int) string {
 	if name, exists := ftls.ProtocolToName[protocol]; exists {
 		return name
 	}
+
 	return fmt.Sprintf("%d", protocol)
 }
