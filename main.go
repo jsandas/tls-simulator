@@ -201,6 +201,7 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 		if n > 0 {
 			resp = append(resp, buffer[:n]...)
 		}
+
 		if err != nil {
 			// If we got some data before the error, and it's a timeout,
 			// we consider this a success - the server might have just closed
@@ -208,6 +209,7 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 			if len(resp) > 0 && isTimeoutError(err) {
 				return resp, nil
 			}
+
 			if isTimeoutError(err) {
 				return nil, fmt.Errorf("read timeout: %v", err)
 			}
