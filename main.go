@@ -25,7 +25,8 @@ type TLSHandshakeResult struct {
 }
 
 // buildClientHello creates a ClientHelloMsg with the specified parameters.
-func buildClientHello(protocolVer uint16, ciphers []uint16, curves []ftls.CurveID, sniHost string) *ftls.ClientHelloMsg {
+func buildClientHello(protocolVer uint16, ciphers []uint16,
+	curves []ftls.CurveID, sniHost string) *ftls.ClientHelloMsg {
 	clientMsg := &ftls.ClientHelloMsg{
 		Vers:               protocolVer,
 		CipherSuites:       ciphers,
@@ -130,7 +131,8 @@ func parseServerResponse(serverHelloBytes, serverKeyExchangeBytes []byte) (*TLSH
 }
 
 // PerformTLSHandshake performs a TLS handshake with the specified parameters.
-func PerformTLSHandshake(protocolVer uint16, ciphers []uint16, curves []ftls.CurveID, serverAddr string) (*TLSHandshakeResult, error) {
+func PerformTLSHandshake(protocolVer uint16, ciphers []uint16,
+	curves []ftls.CurveID, serverAddr string) (*TLSHandshakeResult, error) {
 	sniHost, _, err := net.SplitHostPort(serverAddr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid server address: %v", err)
