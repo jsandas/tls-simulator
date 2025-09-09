@@ -13,32 +13,9 @@ on:
 
 jobs:
   lint:
-    name: Lint and Format Check
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version-file: "go.mod"
-        cache: true
-        
-    - name: Install golangci-lint
-      uses: golangci/golangci-lint-action@v4
-      with:
-        version: latest
-        
-    - name: Run golangci-lint
-      run: make lint
-        
-    - name: Check gofmt
-      run: make fmt-check
-        
-    - name: Check go mod tidy
-      run: make go-mod-tidy
+    permissions:
+      contents: read
+    uses: jsandas/github-actions/.github/workflows/golang-lint.yml@main
 
   security:
     name: Security Scan
