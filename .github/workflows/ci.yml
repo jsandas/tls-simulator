@@ -1,15 +1,9 @@
 name: CI Tests
 
 on:
-  workflow_dispatch: {}
   push:
     branches:
       - '*'
-    paths:
-      - "**/*.go"
-      - "**/go.mod"
-      - "**/go.sum"
-      - ".github/workflows/ci.yml"
 
 jobs:
   lint:
