@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - '*'
+  pull_request:
+    branches:
+      - main
 
 jobs:
   lint:
@@ -20,14 +23,14 @@ jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [lint]
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
+    - uses: actions/checkout@v5
       
-    - name: Set up Go
-      uses: actions/setup-go@v6
+    - uses: actions/setup-go@v6
       with:
         go-version-file: "go.mod"
         cache: true

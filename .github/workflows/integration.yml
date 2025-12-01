@@ -9,19 +9,18 @@ jobs:
   test:
     name: Run Integration Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
+    - uses: actions/checkout@v5
       
-    - name: Set up Go
-      uses: actions/setup-go@v6
+    - uses: actions/setup-go@v6
       with:
         go-version-file: "go.mod"
         cache: true
         
-    - name: Set up Docker
-      uses: docker/setup-docker-action@v4
+    - uses: docker/setup-docker-action@v4
         
     - name: Build the application
       run: |
