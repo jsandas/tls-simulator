@@ -2,12 +2,8 @@ name: Integration Tests
 
 on:
   pull_request:
-    branches: [ main ]
-    paths:
-      - "**/*.go"
-      - "**/go.mod"
-      - "**/go.sum"
-      - ".github/workflows/integration.yml"
+    branches:
+      - main
 
 jobs:
   test:
