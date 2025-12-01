@@ -419,6 +419,7 @@ func (m *ClientHelloMsg) Unmarshal(data []byte) bool {
 	}
 
 	seenExts := make(map[uint16]bool)
+
 	for !extensions.Empty() {
 		var extension uint16
 
@@ -862,6 +863,7 @@ func (m *ServerHelloMsg) Unmarshal(data []byte) bool {
 	}
 
 	seenExts := make(map[uint16]bool)
+
 	for !extensions.Empty() {
 		var extension uint16
 
