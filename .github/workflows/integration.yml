@@ -20,7 +20,7 @@ jobs:
           go-version-file: "go.mod"
           cache: true
         
-      - uses: docker/setup-docker-action@v5.0.0
+      - uses: docker/setup-docker-action@v5.1.0
           
       - name: Build the application
         run: |
