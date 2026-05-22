@@ -1045,16 +1045,16 @@ func (m *ServerKeyExchangeMsg) GetKey() error {
 		// Get the curve name and key size
 		switch curveID {
 		case X25519:
-			m.KeyType, m.KeySize, m.CurveID = "X25519", 32, curveID
+			m.KeyType, m.KeySize, m.CurveID = curveX25519, 32, curveID
 			return nil
 		case CurveP256:
-			m.KeyType, m.KeySize, m.CurveID = "P-256", 32, curveID
+			m.KeyType, m.KeySize, m.CurveID = curveP256, 32, curveID
 			return nil
 		case CurveP384:
-			m.KeyType, m.KeySize, m.CurveID = "P-384", 48, curveID
+			m.KeyType, m.KeySize, m.CurveID = curveP384, 48, curveID
 			return nil
 		case CurveP521:
-			m.KeyType, m.KeySize, m.CurveID = "P-521", 66, curveID
+			m.KeyType, m.KeySize, m.CurveID = curveP521, 66, curveID
 			return nil
 		default:
 			return fmt.Errorf("unknown curve (0x%04x)", curveID)
@@ -1073,22 +1073,22 @@ func (m *ServerKeyExchangeMsg) GetKey() error {
 			// Identify common DH groups by their prime size and specific values
 			switch len(dhP) {
 			case 128: // 1024 bits
-				m.KeyType, m.KeySize, m.CurveID = "DH-1024", 128, DH1024
+				m.KeyType, m.KeySize, m.CurveID = curveDH1024, 128, DH1024
 				return nil
 			case 256: // 2048 bits
-				m.KeyType, m.KeySize, m.CurveID = "DH-2048", 256, DH2048
+				m.KeyType, m.KeySize, m.CurveID = curveDH2048, 256, DH2048
 				return nil
 			case 384: // 3072 bits
-				m.KeyType, m.KeySize, m.CurveID = "DH-3072", 384, DH3072
+				m.KeyType, m.KeySize, m.CurveID = curveDH3072, 384, DH3072
 				return nil
 			case 512: // 4096 bits
-				m.KeyType, m.KeySize, m.CurveID = "DH-4096", 512, DH4096
+				m.KeyType, m.KeySize, m.CurveID = curveDH4096, 512, DH4096
 				return nil
 			case 768: // 6144 bits
-				m.KeyType, m.KeySize, m.CurveID = "DH-6144", 768, DH6144
+				m.KeyType, m.KeySize, m.CurveID = curveDH6144, 768, DH6144
 				return nil
 			case 1024: // 8192 bits
-				m.KeyType, m.KeySize, m.CurveID = "DH-8192", 1024, DH8192
+				m.KeyType, m.KeySize, m.CurveID = curveDH8192, 1024, DH8192
 				return nil
 			default:
 				return fmt.Errorf("DH-%d", len(dhP)*8)

@@ -167,18 +167,32 @@ var DefaultCurves = []CurveID{
 	CurveP384,
 	CurveP256}
 
+const (
+	curveX25519         = "X25519"
+	curveP256           = "P-256"
+	curveP384           = "P-384"
+	curveP521           = "P-521"
+	curveDH1024         = "DH-1024"
+	curveDH2048         = "DH-2048"
+	curveDH3072         = "DH-3072"
+	curveDH4096         = "DH-4096"
+	curveDH6144         = "DH-6144"
+	curveDH8192         = "DH-8192"
+	curveX25519MLKEM768 = "X25519-ML-KEM-768"
+)
+
 var CurveIDToName = map[CurveID]string{
-	X25519:         "X25519",
-	CurveP256:      "P-256",
-	CurveP384:      "P-384",
-	CurveP521:      "P-521",
-	DH1024:         "DH-1024",
-	DH2048:         "DH-2048",
-	DH3072:         "DH-3072",
-	DH4096:         "DH-4096",
-	DH6144:         "DH-6144",
-	DH8192:         "DH-8192",
-	X25519MLKEM768: "X25519-ML-KEM-768",
+	X25519:         curveX25519,
+	CurveP256:      curveP256,
+	CurveP384:      curveP384,
+	CurveP521:      curveP521,
+	DH1024:         curveDH1024,
+	DH2048:         curveDH2048,
+	DH3072:         curveDH3072,
+	DH4096:         curveDH4096,
+	DH6144:         curveDH6144,
+	DH8192:         curveDH8192,
+	X25519MLKEM768: curveX25519MLKEM768,
 }
 
 var ProtocolToName = map[int]string{
