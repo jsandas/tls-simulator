@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -185,7 +184,7 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 	ctx = context.Background()
 
 	err = starttls.StartTLS(ctx, conn, port)
-	if err != nil && !errors.Is(err, starttls.ErrUnsupportedProtocol) {
+	if err != nil {
 		return nil, fmt.Errorf("STARTTLS negotiation failed: %v", err)
 	}
 
