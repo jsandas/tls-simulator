@@ -7,7 +7,6 @@ all: build
 
 # Build the TLS simulator library and examples
 build:
-	go build ./...
 	go build -o tls-simulator ./examples
 
 # Run all tests and quality checks
@@ -18,7 +17,7 @@ test-unit:
 	@go test -v ./ftls/...
 
 # Run integration tests (requires docker compose)
-test-integration: docker-up
+test-integration:
 	@echo "Waiting for services to be ready..."
 	@sleep 5
 	go test -v -tags integration ./integration_tests/...

@@ -23,7 +23,7 @@ jobs:
       # Building isn't strictly necessary for running the integration tests, but
       # it ensures that the code compiles before bringing up the Docker containers.
       - name: Build the application
-        run: go build -v ./...
+        run: go build -o tls-simulator ./examples
           
       - name: Run integration tests
         run: |
