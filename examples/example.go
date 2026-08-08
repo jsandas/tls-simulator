@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/jsandas/tls-simulator"
 	"github.com/jsandas/tls-simulator/ftls"
 )
 
@@ -20,7 +21,7 @@ func main() {
 
 	curves := []ftls.CurveID{ftls.X25519, ftls.CurveP256, ftls.CurveP384, ftls.CurveP521}
 
-	result, err := PerformTLSHandshake(tls.VersionTLS12, ciphers, curves, "localhost:443")
+	result, err := simulator.PerformTLSHandshake(tls.VersionTLS12, ciphers, curves, "localhost:443")
 	if err != nil {
 		log.Printf("TLS handshake failed: %v", err)
 		return
@@ -52,7 +53,7 @@ func main() {
 		tls.TLS_AES_128_GCM_SHA256,
 	}
 
-	result2, err := PerformTLSHandshake(tls.VersionTLS13, ciphersTLS13, curves, "localhost:443")
+	result2, err := simulator.PerformTLSHandshake(tls.VersionTLS13, ciphersTLS13, curves, "localhost:443")
 	if err != nil {
 		log.Printf("TLS 1.3 handshake failed: %v", err)
 		return
