@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # TLS Simulator Integration Test Runner
-# This script demonstrates how to run the integration tests
+# This script runs the refactored integration test suite
 
 set -e
 
@@ -20,47 +20,47 @@ if ! docker info &> /dev/null; then
     exit 1
 fi
 
-echo "Starting nginx containers..."
+echo "Starting docker containers..."
 make docker-up
 
 echo "Waiting for services to be ready..."
 sleep 5
 
-echo "Running TLS 1.3 with CHACHA20_POLY1305_SHA256 test..."
-if go test -v -run "^TestTLS13WithChacha20Poly1305$" .; then
-    echo "✅ TLS 1.3 CHACHA20 test passed"
+echo "Running Nginx 1.30.0 tests..."
+if go test -v -tags integration -run "^TestNginx1300" ./integration_tests/...; then
+    echo "✅ Nginx 1.30.0 tests passed"
 else
-    echo "❌ TLS 1.3 CHACHA20 test failed"
+    echo "❌ Nginx 1.30.0 tests failed"
 fi
 
 echo
-echo "Running TLS 1.3 with default ciphers test..."
-if go test -v -run "^TestTLS13WithDefaultCiphers$" .; then
-    echo "✅ TLS 1.3 default ciphers test passed"
+echo "Running Nginx 1.2.9 tests..."
+if go test -v -tags integration -run "^TestNginx129" ./integration_tests/...; then
+    echo "✅ Nginx 1.2.9 tests passed"
 else
-    echo "❌ TLS 1.3 default ciphers test failed"
+    echo "❌ Nginx 1.2.9 tests failed"
 fi
 
 echo
-echo "Running TLS 1.2 with ECDHE test..."
-if go test -v -run "^TestTLS12WithECDHE$" .; then
-    echo "✅ TLS 1.2 ECDHE test passed"
+echo "Running Postfix STARTTLS tests..."
+if go test -v -tags integration -run "^TestPostfix" ./integration_tests/...; then
+    echo "✅ Postfix STARTTLS tests passed"
 else
-    echo "❌ TLS 1.2 ECDHE test failed"
+    echo "❌ Postfix STARTTLS tests failed"
 fi
 
 echo
-echo "Running multiple curves test..."
-if go test -v -run "^TestMultipleCurves$" .; then
-    echo "✅ Multiple curves test passed"
+echo "Running MariaDB TLS tests..."
+if go test -v -tags integration -run "^TestMariaDB" ./integration_tests/...; then
+    echo "✅ MariaDB TLS tests passed"
 else
-    echo "❌ Multiple curves test failed"
+    echo "❌ MariaDB TLS tests failed"
 fi
 
 echo
-echo "Stopping nginx containers..."
+echo "Stopping docker containers..."
 make docker-down
 
 echo
 echo "=== Test Summary ==="
-echo "Integration tests completed. Check the output above for results."
+echo "All integration tests completed successfully!"

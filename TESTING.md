@@ -4,180 +4,90 @@ This document describes how to run the integration tests for the TLS Simulator m
 
 ## Prerequisites
 
-- Go 1.24 or later
+- Go 1.25 or later
 - Docker and Docker Compose
-- The nginx containers defined in `docker-compose.yml`
+- Target containers defined in `integration_tests/docker-compose.yml`
 
 ## Test Structure
 
-The test suite consists of:
+The integration tests reside in the `integration_tests/` directory:
 
-- **Integration Tests** (`integration_test.go`): Tests that require running nginx containers
-- **Test Helpers** (`test_helpers.go`): Utility functions for test validation and configuration
-
-**Note**: Currently, all tests are integration tests that require Docker containers. Pure unit tests can be added in the future for testing individual functions without external dependencies.
+- **Setup & Teardown** (`setup_test.go`): Manages starting and stopping docker compose containers and waiting for service health
+- **Nginx 1.30.0 Tests** (`nginx_1_30_0_test.go`): Tests TLS 1.3/1.2 negotiation, ciphers, curves, and version constraints across Nginx 1.30.0 containers
+- **Nginx 1.2.9 Tests** (`nginx_1_2_9_test.go`): Tests legacy TLS 1.0–1.2 and SSLv2 configurations on Nginx 1.2.9 with OpenSSL 1.0.1f
+- **Postfix STARTTLS Tests** (`postfix_test.go`): Tests SMTP STARTTLS negotiation on ports 25 and 587
+- **MariaDB TLS Tests** (`mariadb_test.go`): Tests MySQL/MariaDB TLS connection on port 3306
+- **Test Helpers** (`test_helpers.go` in root package `simulator`): Utility functions for test validation and string formatting
 
 ## Running Tests
 
 ### Quick Start
 
 ```bash
-# Run all tests (integration tests)
+# Run all tests (quality checks + integration tests)
 make test
 
 # Run only integration tests
 make test-integration
 
-# Check unit test status
+# Run unit tests
 make test-unit
 ```
 
-### Individual Test Targets
+### Individual Service Test Targets
 
 ```bash
-# Test TLS 1.3 with CHACHA20_POLY1305_SHA256
-make test-tls13-chacha20
+# Test Nginx 1.30.0 containers
+make test-nginx-1-30-0
 
-# Test TLS 1.3 with default cipher suites
-make test-tls13-default
+# Test Nginx 1.2.9 containers
+make test-nginx-1-2-9
+
+# Test Postfix STARTTLS
+make test-postfix
+
+# Test MariaDB TLS
+make test-mariadb
 ```
 
 ### Manual Docker Control
 
 ```bash
-# Start nginx containers
+# Start integration containers
 make docker-up
 
-# Stop nginx containers
+# Stop integration containers
 make docker-down
 ```
 
 ### Direct Go Test Commands
 
 ```bash
-# Run all tests
-go test -v .
+# Run all integration tests
+go test -v -tags integration ./integration_tests/...
 
-# Run only integration tests
-go test -v -run "^Test(Setup|TLS|Nginx|Multiple|Cleanup)" .
-
-# Run specific test
-go test -v -run "^TestTLS13WithChacha20Poly1305$" .
+# Run specific test file or scenario
+go test -v -tags integration -run "^TestNginx1300_TLS13" ./integration_tests/...
 ```
-
-## Test Cases
-
-### TLS 1.3 Tests
-
-1. **TestTLS13WithChacha20Poly1305**: Tests TLS 1.3 with the specific cipher suite `TLS_CHACHA20_POLY1305_SHA256`
-2. **TestTLS13WithDefaultCiphers**: Tests TLS 1.3 with default cipher suites (empty cipher list)
-
-### TLS 1.2 Tests
-
-3. **TestTLS12WithECDHE**: Tests TLS 1.2 with ECDHE cipher suites
-4. **TestTLS12WithDHE**: Tests TLS 1.2 with DHE cipher suites
-
-### Container Tests
-
-5. **TestNginxBadContainer**: Tests connection to the nginx_bad container
-6. **TestMultipleCurves**: Tests negotiation of different elliptic curves
-
-### Setup and Cleanup
-
-7. **TestSetup**: Starts docker compose services
-8. **TestCleanup**: Stops docker compose services
 
 ## Test Configuration
 
-Tests use the following nginx containers:
+Tests use containers defined in `integration_tests/docker-compose.yml`:
 
-- **nginx_good**: `localhost:443` - Good TLS configuration
-- **nginx_bad**: `localhost:8443` - Bad TLS configuration
+- **nginx_1.30.0_tls12-tls13**: `localhost:443` - TLS 1.2 + TLS 1.3
+- **nginx_1.30.0_tls12**: `localhost:1443` - TLS 1.2 only
+- **nginx_1.30.0_tls10-tls13**: `localhost:2443` - TLS 1.0 through TLS 1.3
+- **nginx_1.2.9_tls12**: `localhost:3443` - TLS 1.2 with OpenSSL 1.0.1f
+- **nginx_1.2.9_tls10-tls12**: `localhost:4443` - TLS 1.0 through TLS 1.2
+- **nginx_1.2.9_sslv2-tls12**: `localhost:5443` - SSLv2 through TLS 1.2
+- **postfix-2.11.0_sslv2-tls12**: `localhost:25` & `localhost:587` - STARTTLS ports
+- **mariadb-12.3**: `localhost:3306` - MariaDB TLS port
 
 ## Test Validation
 
 Each test validates:
 
-- **Protocol Version**: Correct TLS version negotiation
-- **Cipher Suite**: Proper cipher suite selection
+- **Protocol Version**: Correct TLS version negotiation (`TLS 1.0`, `1.1`, `1.2`, `1.3`)
+- **Cipher Suite**: Proper cipher suite selection matching client capabilities
 - **Curve ID**: Valid elliptic curve negotiation (for ECDHE)
-- **ServerHello**: Valid server response structure
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Port already in use**: Make sure ports 443 and 8443 are available
-   ```bash
-   sudo lsof -i :443
-   sudo lsof -i :8443
-   ```
-
-2. **Docker containers not starting**: Check docker compose logs
-   ```bash
-   docker compose logs
-   ```
-
-3. **Tests timing out**: Increase wait time in tests or check container health
-   ```bash
-   docker compose ps
-   ```
-
-### Debug Mode
-
-Run tests with verbose output:
-
-```bash
-go test -v -run "^TestTLS13WithChacha20Poly1305$" .
-```
-
-### Manual Testing
-
-Test the containers manually:
-
-```bash
-# Start containers
-make docker-up
-
-# Test with openssl
-openssl s_client -connect localhost:443 -tls1_3 -cipher TLS_CHACHA20_POLY1305_SHA256
-
-# Stop containers
-make docker-down
-```
-
-## Adding New Tests
-
-To add a new integration test:
-
-1. Add the test function to `integration_test.go`
-2. Use the helper functions from `test_helpers.go` for validation
-3. Add a new make target if needed
-4. Update this documentation
-
-Example test structure:
-
-```go
-func TestNewFeature(t *testing.T) {
-    config := DefaultTestConfig()
-    config.Protocol = tls.VersionTLS12
-    config.Ciphers = []uint16{ftls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384}
-    
-    result, err := PerformTLSHandshake(
-        config.Protocol,
-        config.Ciphers,
-        config.Curves,
-        config.ServerAddr,
-    )
-    
-    if err != nil {
-        t.Fatalf("TLS handshake failed: %v", err)
-    }
-    
-    if err := ValidateTLSResult(result, config.Protocol); err != nil {
-        t.Fatalf("Invalid TLS result: %v", err)
-    }
-    
-    t.Logf("Test passed: %s", GetCipherName(result.Cipher))
-}
-```
+- **ServerHello**: Valid server response parsing

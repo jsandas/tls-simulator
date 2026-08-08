@@ -20,10 +20,10 @@ jobs:
           go-version-file: "go.mod"
           cache: true
 
+      # Building isn't strictly necessary for running the integration tests, but
+      # it ensures that the code compiles before bringing up the Docker containers.
       - name: Build the application
-        run: |
-          go mod download
-          go build -v .
+        run: go build -v ./...
           
       - name: Run integration tests
         run: |
@@ -33,10 +33,10 @@ jobs:
           DOCKER_CLIENT_TIMEOUT: 120
           COMPOSE_HTTP_TIMEOUT: 120
           
-      - name: Run specific TLS 1.3 tests
+      - name: Run service-specific tests
         run: |
-          make test-tls13-chacha20
-          make test-tls13-default
+          make test-nginx-1-30-0
+          make test-postfix
           
       - name: Cleanup Docker containers
         if: always()

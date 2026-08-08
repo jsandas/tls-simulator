@@ -34,6 +34,7 @@ import (
     "fmt"
     "log"
 
+    "github.com/jsandas/tls-simulator"
     "github.com/jsandas/tls-simulator/ftls"
 )
 
@@ -54,8 +55,8 @@ func main() {
     }
 
     // Perform TLS handshake
-    result, err := PerformTLSHandshake(
-        ftls.VersionTLS12,  // Protocol version
+    result, err := simulator.PerformTLSHandshake(
+        tls.VersionTLS12,   // Protocol version
         ciphers,           // Cipher suites
         curves,            // Elliptic curves
         "localhost:443",   // Server address
@@ -129,7 +130,7 @@ type TLSHandshakeResult struct {
     ServerHello *ftls.ServerHelloMsg  // Parsed ServerHello message
     Protocol    int                   // Negotiated protocol version
     Cipher      uint16                // Negotiated cipher suite
-    CurveID     ftls.CurveID         // Curve ID for ECDHE key exchange
+    CurveID     ftls.CurveID          // Curve ID for ECDHE key exchange
     Error       error                 // Any parsing errors
 }
 ```
@@ -139,31 +140,32 @@ type TLSHandshakeResult struct {
 Run the example:
 
 ```bash
-go run example.go
+go run examples/example.go
 ```
 
 ## Building
 
 ```bash
-go build
+go build ./...
 ```
 
 ## Testing
 
 ### Local Testing
 ```bash
-# Run integration tests (requires Docker)
+# Run all integration tests (requires Docker)
 make test-integration
 
-# Run specific TLS 1.3 tests
-make test-tls13-chacha20
-make test-tls13-default
+# Run specific target service tests
+make test-nginx-1-30-0
+make test-nginx-1-2-9
+make test-postfix
+make test-mariadb
 ```
 
 ### CI/CD
 This project uses GitHub Actions for continuous integration:
 - **Integration Tests**: Run on every PR and push to main branch
-- **Scheduled Tests**: Run daily to ensure nginx containers remain functional
 - **Security Scanning**: Automated security checks with gosec
 
 See [`.github/README.md`](.github/README.md) for detailed workflow documentation.
@@ -171,9 +173,8 @@ See [`.github/README.md`](.github/README.md) for detailed workflow documentation
 ## Dependencies
 
 - `golang.org/x/crypto`: For cryptographic operations
-- `crypto/tls`: For TLS constants and types
+- `github.com/jsandas/starttls-go`: For STARTTLS negotiation
 
 ## License
 
 This project is licensed under the MIT License.
-
