@@ -1,9 +1,10 @@
 # TLS Simulator
 
-[![Integration Tests](https://github.com/jsandas/tls-simulator/workflows/Integration%20Tests/badge.svg)](https://github.com/jsandas/tls-simulator/actions?query=workflow%3A%22Integration+Tests%22)
-[![CI](https://github.com/jsandas/tls-simulator/workflows/CI/badge.svg)](https://github.com/jsandas/tls-simulator/actions?query=workflow%3A%22CI%22)
-[![Go Version](https://img.shields.io/badge/go-1.24+-blue.svg)](https://golang.org/dl/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Integration Tests](https://github.com/jsandas/tls-simulator/actions/workflows/integration.yml/badge.svg)](https://github.com/jsandas/tls-simulator/actions/workflows/integration.yml)
+[![Code Tests](https://github.com/jsandas/tls-simulator/actions/workflows/code.yml/badge.svg)](https://github.com/jsandas/tls-simulator/actions/workflows/code.yml)
+[![Quality Checks](https://github.com/jsandas/tls-simulator/actions/workflows/quality.yml/badge.svg)](https://github.com/jsandas/tls-simulator/actions/workflows/quality.yml)
+[![codecov](https://codecov.io/gh/jsandas/tls-simulator/graph/badge.svg?token=9O0Y21LVFR)](https://codecov.io/gh/jsandas/tls-simulator)
+[![GoDoc](https://godoc.org/github.com/jsandas/tls-simulator?status.svg)](https://godoc.org/github.com/jsandas/tls-simulator)
 
 A Go module for performing TLS handshakes and analyzing cryptographic parameters used in TLS connections.
 
