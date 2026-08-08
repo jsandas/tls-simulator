@@ -74,14 +74,14 @@ go test -v -tags integration -run "^TestNginx1300_TLS13" ./integration_tests/...
 
 Tests use containers defined in `integration_tests/docker-compose.yml`:
 
-- **nginx_1.30.0_tls12-tls13**: `localhost:443` - TLS 1.2 + TLS 1.3
-- **nginx_1.30.0_tls12**: `localhost:1443` - TLS 1.2 only
-- **nginx_1.30.0_tls10-tls13**: `localhost:2443` - TLS 1.0 through TLS 1.3
-- **nginx_1.2.9_tls12**: `localhost:3443` - TLS 1.2 with OpenSSL 1.0.1f
-- **nginx_1.2.9_tls10-tls12**: `localhost:4443` - TLS 1.0 through TLS 1.2
-- **nginx_1.2.9_sslv2-tls12**: `localhost:5443` - SSLv2 through TLS 1.2
-- **postfix-2.11.0_sslv2-tls12**: `localhost:25` & `localhost:587` - STARTTLS ports
-- **mariadb-12.3**: `localhost:3306` - MariaDB TLS port
+- **nginx_1.30.0_tls12-tls13**: `127.0.0.1:443` - TLS 1.2 + TLS 1.3
+- **nginx_1.30.0_tls12**: `127.0.0.1:1443` - TLS 1.2 only
+- **nginx_1.30.0_tls10-tls13**: `127.0.0.1:2443` - TLS 1.0 through TLS 1.3
+- **nginx_1.2.9_tls12**: `127.0.0.1:3443` - TLS 1.2 with OpenSSL 1.0.1f
+- **nginx_1.2.9_tls10-tls12**: `127.0.0.1:4443` - TLS 1.0 through TLS 1.2
+- **nginx_1.2.9_sslv2-tls12**: `127.0.0.1:5443` - SSLv2 through TLS 1.2
+- **postfix-2.11.0_sslv2-tls12**: `127.0.0.1:25` & `127.0.0.1:587` - STARTTLS ports
+- **mariadb-12.3**: `127.0.0.1:3306` - MariaDB TLS port
 
 ## Test Validation
 

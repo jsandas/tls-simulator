@@ -59,7 +59,7 @@ func main() {
         tls.VersionTLS12,   // Protocol version
         ciphers,           // Cipher suites
         curves,            // Elliptic curves
-        "localhost:443",   // Server address
+        "127.0.0.1:443",   // Server address
     )
     if err != nil {
         log.Fatalf("TLS handshake failed: %v", err)
