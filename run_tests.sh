@@ -5,6 +5,8 @@
 
 set -e
 
+FAILED=0
+
 echo "=== TLS Simulator Integration Tests ==="
 echo
 
@@ -20,17 +22,12 @@ if ! docker info &> /dev/null; then
     exit 1
 fi
 
-echo "Starting docker containers..."
-make docker-up
-
-echo "Waiting for services to be ready..."
-sleep 5
-
 echo "Running Nginx 1.30.0 tests..."
 if go test -v -tags integration -run "^TestNginx1300" ./integration_tests/...; then
     echo "✅ Nginx 1.30.0 tests passed"
 else
     echo "❌ Nginx 1.30.0 tests failed"
+    FAILED=1
 fi
 
 echo
@@ -39,6 +36,7 @@ if go test -v -tags integration -run "^TestNginx129" ./integration_tests/...; th
     echo "✅ Nginx 1.2.9 tests passed"
 else
     echo "❌ Nginx 1.2.9 tests failed"
+    FAILED=1
 fi
 
 echo
@@ -47,6 +45,7 @@ if go test -v -tags integration -run "^TestPostfix" ./integration_tests/...; the
     echo "✅ Postfix STARTTLS tests passed"
 else
     echo "❌ Postfix STARTTLS tests failed"
+    FAILED=1
 fi
 
 echo
@@ -55,6 +54,7 @@ if go test -v -tags integration -run "^TestMariaDB" ./integration_tests/...; the
     echo "✅ MariaDB TLS tests passed"
 else
     echo "❌ MariaDB TLS tests failed"
+    FAILED=1
 fi
 
 echo
@@ -63,4 +63,10 @@ make docker-down
 
 echo
 echo "=== Test Summary ==="
-echo "All integration tests completed successfully!"
+if [ "$FAILED" -eq 0 ]; then
+    echo "All integration tests completed successfully!"
+    exit 0
+else
+    echo "One or more integration test suites failed."
+    exit 1
+fi
