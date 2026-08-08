@@ -181,8 +181,6 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 	}
 
 	// Attempt STARTTLS if needed for this port
-	ctx = context.Background()
-
 	err = starttls.StartTLS(ctx, conn, port)
 	if err != nil {
 		return nil, fmt.Errorf("STARTTLS negotiation failed: %v", err)
