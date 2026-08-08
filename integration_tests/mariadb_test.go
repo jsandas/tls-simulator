@@ -29,9 +29,12 @@ func TestMariaDB_TLS(t *testing.T) {
 
 	var result *simulator.TLSHandshakeResult
 	var err error
+	maxAttempts := 5
+	backoff := 1 * time.Second
 
-	// Retry up to 5 attempts to allow MariaDB engine initialization after container startup
-	for attempt := 1; attempt <= 5; attempt++ {
+	// Retry to allow MariaDB engine initialization after container startup.
+	// Use exponential backoff for slower CI runners.
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		result, err = simulator.PerformTLSHandshake(
 			tls.VersionTLS12,
 			ciphers,
@@ -41,7 +44,10 @@ func TestMariaDB_TLS(t *testing.T) {
 		if err == nil {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		if attempt < maxAttempts {
+			time.Sleep(backoff)
+			backoff *= 2
+		}
 	}
 
 	if err != nil {
