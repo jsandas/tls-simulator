@@ -6,8 +6,8 @@ import (
 	"crypto/tls"
 	"testing"
 
-	simulator "github.com/jsandas/tls-simulator"
 	"github.com/jsandas/tls-simulator/ftls"
+	"github.com/jsandas/tls-simulator/simulator"
 )
 
 // TestNginx1300_TLS13_Chacha20 tests TLS 1.3 with CHACHA20_POLY1305_SHA256 on Nginx 1.30.0 (port 443).

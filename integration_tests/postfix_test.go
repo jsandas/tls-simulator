@@ -6,8 +6,8 @@ import (
 	"crypto/tls"
 	"testing"
 
-	simulator "github.com/jsandas/tls-simulator"
 	"github.com/jsandas/tls-simulator/ftls"
+	"github.com/jsandas/tls-simulator/simulator"
 )
 
 // TestPostfix_Port25_STARTTLS tests STARTTLS connection to Postfix on port 25.

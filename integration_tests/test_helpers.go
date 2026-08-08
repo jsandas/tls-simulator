@@ -9,8 +9,8 @@ import (
 	"net"
 	"time"
 
-	simulator "github.com/jsandas/tls-simulator"
 	"github.com/jsandas/tls-simulator/ftls"
+	"github.com/jsandas/tls-simulator/simulator"
 )
 
 // TestConfig holds configuration for integration tests.

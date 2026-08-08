@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/jsandas/tls-simulator"
 	"github.com/jsandas/tls-simulator/ftls"
+	"github.com/jsandas/tls-simulator/simulator"
 )
 
 func main() {

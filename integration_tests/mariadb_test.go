@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	simulator "github.com/jsandas/tls-simulator"
 	"github.com/jsandas/tls-simulator/ftls"
+	"github.com/jsandas/tls-simulator/simulator"
 )
 
 // TestMariaDB_TLS tests TLS handshake connection to MariaDB (port 3306).

@@ -5,8 +5,8 @@ package integrationtests
 import (
 	"testing"
 
-	simulator "github.com/jsandas/tls-simulator"
 	"github.com/jsandas/tls-simulator/ftls"
+	"github.com/jsandas/tls-simulator/simulator"
 )
 
 // TestNginx129_TLS12_ECDHE_And_DHE tests Nginx 1.2.9 (OpenSSL 1.0.1f) with TLS 1.2 ECDHE & DHE ciphers (port 3443).
