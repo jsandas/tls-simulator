@@ -36,14 +36,19 @@ func DefaultTestConfig() TestConfig {
 // WaitForServer waits for the server to be ready.
 func WaitForServer(addr string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	const attemptTimeout = 2 * time.Second
 
 	for time.Now().Before(deadline) {
+		dialTimeout := attemptTimeout
+		if remaining := time.Until(deadline); remaining < dialTimeout {
+			dialTimeout = remaining
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 		dialer := &net.Dialer{}
 
 		conn, err := dialer.DialContext(ctx, "tcp", addr)
+		cancel()
 		if err == nil {
 			cerr := conn.Close()
 			if cerr != nil {
