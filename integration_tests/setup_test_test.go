@@ -9,17 +9,14 @@ import (
 
 func TestRunWithCleanupInvokesCleanupOnError(t *testing.T) {
 	var cleanupCalled bool
-	origRunner := dockerComposeRunner
-	defer func() { dockerComposeRunner = origRunner }()
-
-	dockerComposeRunner = func(args ...string) error {
+	runner := func(args ...string) error {
 		if len(args) == 1 && args[0] == "down" {
 			cleanupCalled = true
 		}
 		return nil
 	}
 
-	err := runWithCleanup(func() error {
+	err := runWithCleanup(runner, func() error {
 		return errors.New("boom")
 	})
 	if err == nil {

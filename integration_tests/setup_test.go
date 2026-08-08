@@ -42,19 +42,19 @@ var dockerComposeRunner = func(args ...string) error {
 	return cmd.Run()
 }
 
-func cleanupDockerCompose() {
+func cleanupDockerCompose(runner func(args ...string) error) {
 	fmt.Println("=== Integration Tests Teardown: Stopping Docker Compose ===")
-	_ = dockerComposeRunner("down")
+	_ = runner("down")
 }
 
-func exitWithCleanup(code int) {
-	cleanupDockerCompose()
+func exitWithCleanup(code int, runner func(args ...string) error) {
+	cleanupDockerCompose(runner)
 	os.Exit(code)
 }
 
-func runWithCleanup(action func() error) error {
+func runWithCleanup(runner func(args ...string) error, action func() error) error {
 	if err := action(); err != nil {
-		cleanupDockerCompose()
+		cleanupDockerCompose(runner)
 		return err
 	}
 	return nil
@@ -62,12 +62,14 @@ func runWithCleanup(action func() error) error {
 
 // TestMain manages the life-cycle of docker compose services for integration tests.
 func TestMain(m *testing.M) {
+	runner := dockerComposeRunner
+
 	fmt.Println("=== Integration Tests Setup: Starting Docker Compose ===")
-	if err := runWithCleanup(func() error {
-		return dockerComposeRunner("up", "-d")
+	if err := runWithCleanup(runner, func() error {
+		return runner("up", "-d")
 	}); err != nil {
 		fmt.Printf("Failed to start docker compose services: %v\n", err)
-		exitWithCleanup(1)
+		exitWithCleanup(1, runner)
 	}
 
 	// Wait for each service port to be open
@@ -75,7 +77,7 @@ func TestMain(m *testing.M) {
 	for _, addr := range allAddrs {
 		if err := WaitForServer(addr, 20*time.Second); err != nil {
 			fmt.Printf("Service at %s failed to become ready: %v\n", addr, err)
-			exitWithCleanup(1)
+			exitWithCleanup(1, runner)
 		}
 	}
 	// Give services (like MariaDB engine initialization) a brief warm-up buffer
@@ -83,6 +85,6 @@ func TestMain(m *testing.M) {
 	fmt.Println("All services are ready!")
 
 	code := m.Run()
-	cleanupDockerCompose()
+	cleanupDockerCompose(runner)
 	os.Exit(code)
 }
