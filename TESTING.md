@@ -127,11 +127,11 @@ make docker-down
 ### Direct Go Test Commands
 
 ```bash
-# Run simulator unit tests with coverage
-go test -v -cover ./simulator/...
+# Run simulator unit tests with coverage (writes coverage.out)
+go test -v -coverprofile=coverage.out ./simulator/...
 
-# Run all unit tests
-go test -v ./...
+# Run all unit tests (exclude integration_tests, which requires -tags integration)
+go test -v $(go list ./... | grep -v "/integration_tests$")
 
 # Run all integration tests
 go test -v -tags integration ./integration_tests/...
