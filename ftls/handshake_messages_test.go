@@ -405,6 +405,7 @@ func clientHelloExtensionsLenOffset(handshake []byte) (int, error) {
 	}
 
 	sessionIDLen := int(handshake[pos])
+
 	pos++
 	if pos+sessionIDLen > len(handshake) {
 		return 0, fmt.Errorf("truncated session_id")
@@ -417,6 +418,7 @@ func clientHelloExtensionsLenOffset(handshake []byte) (int, error) {
 	}
 
 	cipherSuitesLen := int(handshake[pos])<<8 | int(handshake[pos+1])
+
 	pos += 2
 	if pos+cipherSuitesLen > len(handshake) {
 		return 0, fmt.Errorf("truncated cipher_suites")
@@ -429,6 +431,7 @@ func clientHelloExtensionsLenOffset(handshake []byte) (int, error) {
 	}
 
 	compressionMethodsLen := int(handshake[pos])
+
 	pos++
 	if pos+compressionMethodsLen > len(handshake) {
 		return 0, fmt.Errorf("truncated compression_methods")
