@@ -79,7 +79,8 @@ func TestPerformTLSHandshake(t *testing.T) {
 
 			_, _ = conn.Write(record)
 
-			time.Sleep(3 * time.Second)
+			_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+			_, _ = conn.Read(buf)
 		}()
 
 		res, err := PerformTLSHandshake(tls.VersionTLS12, nil, nil, l.Addr().String())
@@ -136,7 +137,8 @@ func TestPerformTLSHandshake(t *testing.T) {
 
 			_, _ = conn.Write(record)
 
-			time.Sleep(3 * time.Second)
+			_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+			_, _ = conn.Read(buf)
 		}()
 
 		res, err := PerformTLSHandshake(tls.VersionTLS13, nil, nil, l.Addr().String())
@@ -214,7 +216,8 @@ func TestPerformTLSHandshake(t *testing.T) {
 
 			_, _ = conn.Write(record)
 
-			time.Sleep(3 * time.Second)
+			_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+			_, _ = conn.Read(buf)
 		}()
 
 		res, err := PerformTLSHandshake(tls.VersionTLS12, nil, nil, l.Addr().String())
@@ -245,7 +248,8 @@ func TestPerformTLSHandshake(t *testing.T) {
 			_, _ = conn.Read(buf)
 			_, _ = conn.Write([]byte("not a valid tls response"))
 
-			time.Sleep(3 * time.Second)
+			_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+			_, _ = conn.Read(buf)
 		}()
 
 		_, err = PerformTLSHandshake(tls.VersionTLS12, nil, nil, l.Addr().String())
@@ -271,7 +275,8 @@ func TestPerformTLSHandshake(t *testing.T) {
 			buf := make([]byte, 4096)
 			_, _ = conn.Read(buf)
 
-			time.Sleep(3 * time.Second)
+			_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+			_, _ = conn.Read(buf)
 		}()
 
 		_, err = PerformTLSHandshake(tls.VersionTLS12, nil, nil, l.Addr().String())
