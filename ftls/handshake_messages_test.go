@@ -439,7 +439,8 @@ func TestClientHelloMarshalUnmarshalFull(t *testing.T) {
 		t.Fatalf("random mismatch")
 	}
 
-	if !got.OcspStapling || !got.TicketSupported || !got.SecureRenegotiationSupported || !got.ExtendedMasterSecret || !got.Scts || !got.EarlyData {
+	if !got.OcspStapling || !got.TicketSupported || !got.SecureRenegotiationSupported ||
+		!got.ExtendedMasterSecret || !got.Scts || !got.EarlyData {
 		t.Fatalf("expected boolean extensions to round-trip")
 	}
 
@@ -537,6 +538,7 @@ func TestClientHelloUnmarshalRejectsInvalid(t *testing.T) {
 		// Append an extra zero-length unknown extension after pre_shared_key
 		// while updating both handshake and extension length fields.
 		msgData := append([]byte(nil), encoded[4:]...)
+
 		extLenOffset := len(msgData) - 2
 		for i := 0; i+3 < len(msgData); i++ {
 			if i+1 < len(msgData) {
@@ -600,7 +602,8 @@ func TestServerHelloMarshalUnmarshalWithExtensions(t *testing.T) {
 		t.Fatal("Unmarshal() returned false")
 	}
 
-	if !got.OcspStapling || !got.TicketSupported || !got.SecureRenegotiationSupported || !got.ExtendedMasterSecret || !got.SelectedIdentityPresent || !got.ServerNameAck {
+	if !got.OcspStapling || !got.TicketSupported || !got.SecureRenegotiationSupported ||
+		!got.ExtendedMasterSecret || !got.SelectedIdentityPresent || !got.ServerNameAck {
 		t.Fatalf("expected boolean extension flags to be set")
 	}
 
@@ -644,6 +647,7 @@ func TestServerHelloUnmarshalHelloRetryRequestKeyShare(t *testing.T) {
 func TestServerKeyExchangeMarshalAndUnmarshal(t *testing.T) {
 	t.Run("marshal normal", func(t *testing.T) {
 		msg := &ServerKeyExchangeMsg{Key: []byte{0x01, 0x02, 0x03}}
+
 		encoded, err := msg.Marshal()
 		if err != nil {
 			t.Fatalf("Marshal() error = %v", err)
@@ -657,7 +661,9 @@ func TestServerKeyExchangeMarshalAndUnmarshal(t *testing.T) {
 
 	t.Run("marshal too large", func(t *testing.T) {
 		msg := &ServerKeyExchangeMsg{Key: make([]byte, 0x1000000)}
-		if _, err := msg.Marshal(); err == nil {
+
+		_, err := msg.Marshal()
+		if err == nil {
 			t.Fatal("Marshal() expected error for oversized key")
 		}
 	})
