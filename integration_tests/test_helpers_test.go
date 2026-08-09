@@ -3,13 +3,14 @@
 package integrationtests
 
 import (
+	"context"
 	"net"
 	"testing"
 	"time"
 )
 
 func TestWaitForServerUsesFreshAttemptTimeout(t *testing.T) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("failed to create initial listener: %v", err)
 	}
@@ -24,7 +25,7 @@ func TestWaitForServerUsesFreshAttemptTimeout(t *testing.T) {
 	go func() {
 		time.Sleep(2500 * time.Millisecond)
 		var err error
-		startedListener, err = net.Listen("tcp", addr)
+		startedListener, err = (&net.ListenConfig{}).Listen(context.Background(), "tcp", addr)
 		if err != nil {
 			t.Errorf("failed to create listener: %v", err)
 			return
