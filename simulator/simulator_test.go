@@ -33,6 +33,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to listen: %v", err)
 		}
+
 		addr := l.Addr().String()
 		_ = l.Close()
 
@@ -64,15 +65,19 @@ func TestPerformTLSHandshake(t *testing.T) {
 				Random:      make([]byte, 32),
 				CipherSuite: 0xc02f, // TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
 			}
+
 			shBytes, err := sh.Marshal()
 			if err != nil {
 				return
 			}
+
 			record, err := createTLSRecord(shBytes)
 			if err != nil {
 				return
 			}
+
 			_, _ = conn.Write(record)
+
 			time.Sleep(3 * time.Second)
 		}()
 
@@ -80,9 +85,11 @@ func TestPerformTLSHandshake(t *testing.T) {
 		if err != nil {
 			t.Fatalf("PerformTLSHandshake failed: %v", err)
 		}
+
 		if res.Protocol != tls.VersionTLS12 {
 			t.Errorf("expected protocol %d, got %d", tls.VersionTLS12, res.Protocol)
 		}
+
 		if res.Cipher != 0xc02f {
 			t.Errorf("expected cipher 0xc02f, got 0x%x", res.Cipher)
 		}
@@ -115,15 +122,19 @@ func TestPerformTLSHandshake(t *testing.T) {
 					Data:  make([]byte, 32),
 				},
 			}
+
 			shBytes, err := sh.Marshal()
 			if err != nil {
 				return
 			}
+
 			record, err := createTLSRecord(shBytes)
 			if err != nil {
 				return
 			}
+
 			_, _ = conn.Write(record)
+
 			time.Sleep(3 * time.Second)
 		}()
 
@@ -131,12 +142,15 @@ func TestPerformTLSHandshake(t *testing.T) {
 		if err != nil {
 			t.Fatalf("PerformTLSHandshake failed: %v", err)
 		}
+
 		if res.Protocol != tls.VersionTLS13 {
 			t.Errorf("expected protocol %d, got %d", tls.VersionTLS13, res.Protocol)
 		}
+
 		if res.Cipher != 0x1301 {
 			t.Errorf("expected cipher 0x1301, got 0x%x", res.Cipher)
 		}
+
 		if res.CurveID != ftls.X25519 {
 			t.Errorf("expected curve ID X25519, got %d", res.CurveID)
 		}
@@ -164,6 +178,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 				Random:      make([]byte, 32),
 				CipherSuite: 0xc02f,
 			}
+
 			shBytes, err := sh.Marshal()
 			if err != nil {
 				return
@@ -178,6 +193,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 					17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
 				},
 			}
+
 			skeBytes, err := ske.Marshal()
 			if err != nil {
 				return
@@ -185,11 +201,14 @@ func TestPerformTLSHandshake(t *testing.T) {
 
 			// Combine ServerHello and ServerKeyExchange into a single record payload
 			combinedPayload := append(shBytes, skeBytes...)
+
 			record, err := createTLSRecord(combinedPayload)
 			if err != nil {
 				return
 			}
+
 			_, _ = conn.Write(record)
+
 			time.Sleep(3 * time.Second)
 		}()
 
@@ -197,6 +216,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 		if err != nil {
 			t.Fatalf("PerformTLSHandshake failed: %v", err)
 		}
+
 		if res.CurveID != ftls.X25519 {
 			t.Errorf("expected curve ID %v, got %v", ftls.X25519, res.CurveID)
 		}
@@ -219,6 +239,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 			buf := make([]byte, 4096)
 			_, _ = conn.Read(buf)
 			_, _ = conn.Write([]byte("not a valid tls response"))
+
 			time.Sleep(3 * time.Second)
 		}()
 
@@ -244,6 +265,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 
 			buf := make([]byte, 4096)
 			_, _ = conn.Read(buf)
+
 			time.Sleep(3 * time.Second)
 		}()
 
@@ -261,12 +283,15 @@ func TestBuildClientHello(t *testing.T) {
 		if ch.Vers != tls.VersionTLS12 {
 			t.Errorf("expected version %d, got %d", tls.VersionTLS12, ch.Vers)
 		}
+
 		if ch.ServerName != "example.com" {
 			t.Errorf("expected SNI example.com, got %s", ch.ServerName)
 		}
+
 		if len(ch.CipherSuites) != len(ftls.DefaultCipherSuites) {
 			t.Errorf("expected default cipher suites length %d, got %d", len(ftls.DefaultCipherSuites), len(ch.CipherSuites))
 		}
+
 		if len(ch.SupportedCurves) != len(ftls.DefaultCurves) {
 			t.Errorf("expected default curves length %d, got %d", len(ftls.DefaultCurves), len(ch.SupportedCurves))
 		}
@@ -278,6 +303,7 @@ func TestBuildClientHello(t *testing.T) {
 		if len(ch.SupportedVersions) != 1 || ch.SupportedVersions[0] != tls.VersionTLS13 {
 			t.Errorf("expected supported versions [1304], got %v", ch.SupportedVersions)
 		}
+
 		if len(ch.CipherSuites) != len(ftls.DefaultCipherSuitesTLS13) {
 			t.Errorf("expected TLS 1.3 default ciphers length %d, got %d", len(ftls.DefaultCipherSuitesTLS13), len(ch.CipherSuites))
 		}
@@ -291,6 +317,7 @@ func TestBuildClientHello(t *testing.T) {
 		if len(ch.CipherSuites) != 2 || ch.CipherSuites[0] != 0xc02f {
 			t.Errorf("unexpected cipher suites: %v", ch.CipherSuites)
 		}
+
 		if len(ch.SupportedCurves) != 1 || ch.SupportedCurves[0] != ftls.X25519 {
 			t.Errorf("unexpected curves: %v", ch.SupportedCurves)
 		}
@@ -300,6 +327,7 @@ func TestBuildClientHello(t *testing.T) {
 func TestCreateTLSRecord(t *testing.T) {
 	t.Run("valid message", func(t *testing.T) {
 		msg := []byte{0x01, 0x02, 0x03, 0x04}
+
 		record, err := createTLSRecord(msg)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -309,9 +337,11 @@ func TestCreateTLSRecord(t *testing.T) {
 		if len(record) != expectedLen {
 			t.Fatalf("expected record length %d, got %d", expectedLen, len(record))
 		}
+
 		if record[0] != 0x16 || record[1] != 0x03 || record[2] != 0x03 {
 			t.Errorf("unexpected TLS record header: %v", record[:3])
 		}
+
 		if int(record[3])<<8|int(record[4]) != len(msg) {
 			t.Errorf("unexpected length bytes in record: %v", record[3:5])
 		}
@@ -319,6 +349,7 @@ func TestCreateTLSRecord(t *testing.T) {
 
 	t.Run("message too large", func(t *testing.T) {
 		largeMsg := make([]byte, 65536)
+
 		_, err := createTLSRecord(largeMsg)
 		if err == nil {
 			t.Fatal("expected error for oversized message, got nil")
@@ -347,6 +378,7 @@ func TestParseServerResponse(t *testing.T) {
 			Random:      make([]byte, 32),
 			CipherSuite: 0xc02f,
 		}
+
 		shBytes, err := sh.Marshal()
 		if err != nil {
 			t.Fatalf("failed to marshal ServerHello: %v", err)
@@ -356,9 +388,11 @@ func TestParseServerResponse(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if res.Protocol != tls.VersionTLS12 {
 			t.Errorf("expected protocol %d, got %d", tls.VersionTLS12, res.Protocol)
 		}
+
 		if res.Cipher != 0xc02f {
 			t.Errorf("expected cipher 0xc02f, got 0x%x", res.Cipher)
 		}
@@ -370,12 +404,14 @@ func TestParseServerResponse(t *testing.T) {
 			Random:      make([]byte, 32),
 			CipherSuite: 0xc02f,
 		}
+
 		shBytes, err := sh.Marshal()
 		if err != nil {
 			t.Fatalf("failed to marshal ServerHello: %v", err)
 		}
 
 		invalidSkeBytes := []byte{0x0c, 0x00}
+
 		_, err = parseServerResponse(shBytes, invalidSkeBytes)
 		if err == nil {
 			t.Fatal("expected error for invalid ServerKeyExchange, got nil")
@@ -388,6 +424,7 @@ func TestParseServerResponse(t *testing.T) {
 			Random:      make([]byte, 32),
 			CipherSuite: 0xc02f,
 		}
+
 		shBytes, err := sh.Marshal()
 		if err != nil {
 			t.Fatalf("failed to marshal ServerHello: %v", err)
@@ -396,6 +433,7 @@ func TestParseServerResponse(t *testing.T) {
 		ske := &ftls.ServerKeyExchangeMsg{
 			Key: []byte{0x03, 0x00}, // malformed key
 		}
+
 		skeBytes, err := ske.Marshal()
 		if err != nil {
 			t.Fatalf("failed to marshal ServerKeyExchange: %v", err)
@@ -405,6 +443,7 @@ func TestParseServerResponse(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected outer error: %v", err)
 		}
+
 		if res.Error == nil {
 			t.Fatal("expected res.Error to be set for malformed key exchange")
 		}
@@ -415,6 +454,7 @@ func TestGetHandshakeMessages(t *testing.T) {
 	t.Run("no handshake messages found", func(t *testing.T) {
 		// Non-handshake record type (0x15 = Alert)
 		data := []byte{0x15, 0x03, 0x03, 0x00, 0x02, 0x01, 0x00}
+
 		_, _, err := getHandshakeMessages(data)
 		if err == nil {
 			t.Fatal("expected error when no handshake message is present, got nil")
@@ -427,6 +467,7 @@ func TestGetHandshakeMessages(t *testing.T) {
 			Random:      make([]byte, 32),
 			CipherSuite: 0xc02f,
 		}
+
 		shBytes, err := sh.Marshal()
 		if err != nil {
 			t.Fatalf("failed to marshal ServerHello: %v", err)
@@ -441,9 +482,11 @@ func TestGetHandshakeMessages(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if shExtracted == nil {
 			t.Fatal("expected non-nil ServerHello")
 		}
+
 		if skeExtracted != nil {
 			t.Errorf("expected nil ServerKeyExchange, got %v", skeExtracted)
 		}
@@ -452,6 +495,7 @@ func TestGetHandshakeMessages(t *testing.T) {
 	t.Run("truncated record data", func(t *testing.T) {
 		// Header says length 10, but payload is only 2 bytes
 		data := []byte{0x16, 0x03, 0x03, 0x00, 0x0a, 0x01, 0x02}
+
 		_, _, err := getHandshakeMessages(data)
 		if err == nil {
 			t.Fatal("expected error for truncated record data, got nil")
