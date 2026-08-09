@@ -2,6 +2,7 @@ package ftls
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
 
@@ -382,6 +383,71 @@ func hasExt(exts []uint16, want uint16) bool {
 	return false
 }
 
+func clientHelloExtensionsLenOffset(handshake []byte) (int, error) {
+	if len(handshake) < 4 {
+		return 0, fmt.Errorf("handshake too short")
+	}
+
+	bodyLen := int(handshake[1])<<16 | int(handshake[2])<<8 | int(handshake[3])
+	if bodyLen != len(handshake)-4 {
+		return 0, fmt.Errorf("invalid handshake length: header=%d actual=%d", bodyLen, len(handshake)-4)
+	}
+
+	pos := 4
+	if pos+2+32 > len(handshake) {
+		return 0, fmt.Errorf("missing version/random")
+	}
+
+	pos += 2 + 32 // legacy_version + random
+
+	if pos+1 > len(handshake) {
+		return 0, fmt.Errorf("missing session_id length")
+	}
+
+	sessionIDLen := int(handshake[pos])
+	pos++
+	if pos+sessionIDLen > len(handshake) {
+		return 0, fmt.Errorf("truncated session_id")
+	}
+
+	pos += sessionIDLen
+
+	if pos+2 > len(handshake) {
+		return 0, fmt.Errorf("missing cipher_suites length")
+	}
+
+	cipherSuitesLen := int(handshake[pos])<<8 | int(handshake[pos+1])
+	pos += 2
+	if pos+cipherSuitesLen > len(handshake) {
+		return 0, fmt.Errorf("truncated cipher_suites")
+	}
+
+	pos += cipherSuitesLen
+
+	if pos+1 > len(handshake) {
+		return 0, fmt.Errorf("missing compression_methods length")
+	}
+
+	compressionMethodsLen := int(handshake[pos])
+	pos++
+	if pos+compressionMethodsLen > len(handshake) {
+		return 0, fmt.Errorf("truncated compression_methods")
+	}
+
+	pos += compressionMethodsLen
+
+	if pos+2 > len(handshake) {
+		return 0, fmt.Errorf("missing extensions length")
+	}
+
+	extensionsLen := int(handshake[pos])<<8 | int(handshake[pos+1])
+	if pos+2+extensionsLen != len(handshake) {
+		return 0, fmt.Errorf("invalid extensions vector length")
+	}
+
+	return pos, nil
+}
+
 func TestClientHelloMarshalUnmarshalFull(t *testing.T) {
 	msg := &ClientHelloMsg{
 		Vers:               VersionTLS12,
@@ -537,29 +603,22 @@ func TestClientHelloUnmarshalRejectsInvalid(t *testing.T) {
 
 		// Append an extra zero-length unknown extension after pre_shared_key
 		// while updating both handshake and extension length fields.
-		msgData := append([]byte(nil), encoded[4:]...)
+		encoded = append([]byte(nil), encoded...)
 
-		extLenOffset := len(msgData) - 2
-		for i := 0; i+3 < len(msgData); i++ {
-			if i+1 < len(msgData) {
-				extLen := int(msgData[i])<<8 | int(msgData[i+1])
-				if i+2+extLen == len(msgData) {
-					extLenOffset = i
-					break
-				}
-			}
+		extLenOffset, err := clientHelloExtensionsLenOffset(encoded)
+		if err != nil {
+			t.Fatalf("failed to locate extensions length: %v", err)
 		}
 
-		extLen := int(msgData[extLenOffset])<<8 | int(msgData[extLenOffset+1])
-		msgData[extLenOffset] = byte((extLen + 4) >> 8)
-		msgData[extLenOffset+1] = byte(extLen + 4)
-		msgData = append(msgData, 0xFA, 0xCE, 0x00, 0x00)
+		extLen := int(encoded[extLenOffset])<<8 | int(encoded[extLenOffset+1])
+		encoded[extLenOffset] = byte((extLen + 4) >> 8)
+		encoded[extLenOffset+1] = byte(extLen + 4)
+		encoded = append(encoded, 0xFA, 0xCE, 0x00, 0x00)
 
-		handshakeLen := len(msgData)
+		handshakeLen := len(encoded) - 4
 		encoded[1] = byte(handshakeLen >> 16)
 		encoded[2] = byte(handshakeLen >> 8)
 		encoded[3] = byte(handshakeLen)
-		encoded = append(encoded[:4], msgData...)
 
 		var got ClientHelloMsg
 		if got.Unmarshal(encoded) {
