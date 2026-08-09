@@ -1,6 +1,7 @@
 package ftls
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -369,4 +370,310 @@ func TestServerKeyExchangeMsgGetKey(t *testing.T) {
 			}
 		})
 	}
+}
+
+func hasExt(exts []uint16, want uint16) bool {
+	for _, ext := range exts {
+		if ext == want {
+			return true
+		}
+	}
+
+	return false
+}
+
+func TestClientHelloMarshalUnmarshalFull(t *testing.T) {
+	msg := &ClientHelloMsg{
+		Vers:               VersionTLS12,
+		Random:             bytes.Repeat([]byte{0xAB}, 32),
+		SessionId:          []byte{0x01, 0x02, 0x03, 0x04},
+		CipherSuites:       []uint16{0x1301, 0x1302, scsvRenegotiation},
+		CompressionMethods: []uint8{0x00},
+		ServerName:         "example.com",
+		OcspStapling:       true,
+		SupportedCurves:    []CurveID{X25519, CurveP256},
+		SupportedPoints:    []uint8{0x00},
+		TicketSupported:    true,
+		SessionTicket:      []uint8{0xAA, 0xBB},
+		SupportedSignatureAlgorithms: []SignatureScheme{
+			SignatureScheme(0x0403),
+			SignatureScheme(0x0804),
+		},
+		SupportedSignatureAlgorithmsCert: []SignatureScheme{
+			SignatureScheme(0x0805),
+		},
+		SecureRenegotiationSupported: true,
+		SecureRenegotiation:          []byte{0xFF},
+		ExtendedMasterSecret:         true,
+		AlpnProtocols:                []string{"h2", "http/1.1"},
+		Scts:                         true,
+		SupportedVersions:            []uint16{VersionTLS13, VersionTLS12},
+		Cookie:                       []byte{0x10, 0x11},
+		KeyShares: []KeyShare{{
+			Group: X25519,
+			Data:  []byte{1, 2, 3, 4},
+		}},
+		EarlyData:               true,
+		PskModes:                []uint8{0x01},
+		PskIdentities:           []PskIdentity{{Label: []byte("psk-id"), ObfuscatedTicketAge: 7}},
+		PskBinders:              [][]byte{{0x01, 0x02, 0x03}},
+		QuicTransportParameters: []byte{},
+		EncryptedClientHello:    []byte{0xEE, 0xCC},
+	}
+
+	encoded, err := msg.MarshalMsg(false)
+	if err != nil {
+		t.Fatalf("MarshalMsg() error = %v", err)
+	}
+
+	var got ClientHelloMsg
+	if !got.Unmarshal(encoded) {
+		t.Fatal("Unmarshal() returned false")
+	}
+
+	if got.Vers != msg.Vers {
+		t.Fatalf("version = %v, want %v", got.Vers, msg.Vers)
+	}
+
+	if !bytes.Equal(got.Random, msg.Random) {
+		t.Fatalf("random mismatch")
+	}
+
+	if !got.OcspStapling || !got.TicketSupported || !got.SecureRenegotiationSupported || !got.ExtendedMasterSecret || !got.Scts || !got.EarlyData {
+		t.Fatalf("expected boolean extensions to round-trip")
+	}
+
+	if got.ServerName != msg.ServerName {
+		t.Fatalf("server name = %q, want %q", got.ServerName, msg.ServerName)
+	}
+
+	if len(got.PskIdentities) != 1 || len(got.PskBinders) != 1 {
+		t.Fatalf("expected one PSK identity and binder")
+	}
+
+	if !hasExt(got.Extensions, ExtensionPreSharedKey) {
+		t.Fatalf("expected pre_shared_key extension to be present")
+	}
+}
+
+func TestClientHelloMarshalMsgECHInner(t *testing.T) {
+	msg := &ClientHelloMsg{
+		Vers:               VersionTLS13,
+		Random:             bytes.Repeat([]byte{0xCD}, 32),
+		SessionId:          []byte{0x99, 0x88, 0x77},
+		CipherSuites:       []uint16{0x1301},
+		CompressionMethods: []uint8{0x00},
+		OcspStapling:       true,
+		SupportedCurves:    []CurveID{X25519},
+		SupportedSignatureAlgorithms: []SignatureScheme{
+			SignatureScheme(0x0403),
+		},
+		AlpnProtocols:     []string{"h2"},
+		SupportedVersions: []uint16{VersionTLS13},
+		Cookie:            []byte{0xAA},
+		KeyShares:         []KeyShare{{Group: X25519, Data: []byte{0x01, 0x02}}},
+		PskModes:          []uint8{0x01},
+	}
+
+	encoded, err := msg.MarshalMsg(true)
+	if err != nil {
+		t.Fatalf("MarshalMsg(true) error = %v", err)
+	}
+
+	var got ClientHelloMsg
+	if !got.Unmarshal(encoded) {
+		t.Fatal("Unmarshal() returned false")
+	}
+
+	if len(got.SessionId) != 0 {
+		t.Fatalf("session id should be omitted for ECH inner")
+	}
+
+	if hasExt(got.Extensions, ExtensionStatusRequest) {
+		t.Fatalf("status_request should not be directly encoded for ECH inner")
+	}
+
+	if !hasExt(got.Extensions, ExtensionECHOuterExtensions) {
+		t.Fatalf("expected ech_outer_extensions extension")
+	}
+}
+
+func TestClientHelloUnmarshalRejectsInvalid(t *testing.T) {
+	t.Run("server name trailing dot", func(t *testing.T) {
+		msg := &ClientHelloMsg{
+			Vers:               VersionTLS12,
+			Random:             bytes.Repeat([]byte{0x11}, 32),
+			CipherSuites:       []uint16{0x1301},
+			CompressionMethods: []uint8{0x00},
+			ServerName:         "example.com.",
+		}
+
+		encoded, err := msg.MarshalMsg(false)
+		if err != nil {
+			t.Fatalf("MarshalMsg() error = %v", err)
+		}
+
+		var got ClientHelloMsg
+		if got.Unmarshal(encoded) {
+			t.Fatal("Unmarshal() expected false for trailing-dot SNI")
+		}
+	})
+
+	t.Run("pre shared key not last", func(t *testing.T) {
+		base := &ClientHelloMsg{
+			Vers:               VersionTLS13,
+			Random:             bytes.Repeat([]byte{0x22}, 32),
+			CipherSuites:       []uint16{0x1301},
+			CompressionMethods: []uint8{0x00},
+			PskIdentities:      []PskIdentity{{Label: []byte("a"), ObfuscatedTicketAge: 1}},
+			PskBinders:         [][]byte{{0x01}},
+		}
+
+		encoded, err := base.MarshalMsg(false)
+		if err != nil {
+			t.Fatalf("MarshalMsg() error = %v", err)
+		}
+
+		// Append an extra zero-length unknown extension after pre_shared_key
+		// while updating both handshake and extension length fields.
+		msgData := append([]byte(nil), encoded[4:]...)
+		extLenOffset := len(msgData) - 2
+		for i := 0; i+3 < len(msgData); i++ {
+			if i+1 < len(msgData) {
+				extLen := int(msgData[i])<<8 | int(msgData[i+1])
+				if i+2+extLen == len(msgData) {
+					extLenOffset = i
+					break
+				}
+			}
+		}
+
+		extLen := int(msgData[extLenOffset])<<8 | int(msgData[extLenOffset+1])
+		msgData[extLenOffset] = byte((extLen + 4) >> 8)
+		msgData[extLenOffset+1] = byte(extLen + 4)
+		msgData = append(msgData, 0xFA, 0xCE, 0x00, 0x00)
+
+		handshakeLen := len(msgData)
+		encoded[1] = byte(handshakeLen >> 16)
+		encoded[2] = byte(handshakeLen >> 8)
+		encoded[3] = byte(handshakeLen)
+		encoded = append(encoded[:4], msgData...)
+
+		var got ClientHelloMsg
+		if got.Unmarshal(encoded) {
+			t.Fatal("Unmarshal() expected false when pre_shared_key is not last")
+		}
+	})
+}
+
+func TestServerHelloMarshalUnmarshalWithExtensions(t *testing.T) {
+	msg := &ServerHelloMsg{
+		Vers:                         VersionTLS13,
+		Random:                       bytes.Repeat([]byte{0x33}, 32),
+		SessionId:                    []byte{0x01, 0x02},
+		CipherSuite:                  0x1301,
+		CompressionMethod:            0,
+		OcspStapling:                 true,
+		TicketSupported:              true,
+		SecureRenegotiationSupported: true,
+		SecureRenegotiation:          []byte{0xAA},
+		ExtendedMasterSecret:         true,
+		AlpnProtocol:                 "h2",
+		Scts:                         [][]byte{{0x01, 0x02}},
+		SupportedVersion:             VersionTLS13,
+		ServerShare:                  KeyShare{Group: X25519, Data: []byte{0x10, 0x20}},
+		SelectedIdentityPresent:      true,
+		SelectedIdentity:             2,
+		SupportedPoints:              []uint8{0x00},
+		EncryptedClientHello:         []byte{0xEE},
+		ServerNameAck:                true,
+		Cookie:                       []byte{0xCA, 0xFE},
+	}
+
+	encoded, err := msg.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	var got ServerHelloMsg
+	if !got.Unmarshal(encoded) {
+		t.Fatal("Unmarshal() returned false")
+	}
+
+	if !got.OcspStapling || !got.TicketSupported || !got.SecureRenegotiationSupported || !got.ExtendedMasterSecret || !got.SelectedIdentityPresent || !got.ServerNameAck {
+		t.Fatalf("expected boolean extension flags to be set")
+	}
+
+	if got.SelectedIdentity != msg.SelectedIdentity || got.SupportedVersion != msg.SupportedVersion {
+		t.Fatalf("selected identity/version mismatch")
+	}
+
+	if got.ServerShare.Group != msg.ServerShare.Group || !bytes.Equal(got.ServerShare.Data, msg.ServerShare.Data) {
+		t.Fatalf("server share mismatch")
+	}
+
+	if !bytes.Equal(got.OriginalBytes(), encoded) {
+		t.Fatalf("OriginalBytes mismatch")
+	}
+}
+
+func TestServerHelloUnmarshalHelloRetryRequestKeyShare(t *testing.T) {
+	msg := &ServerHelloMsg{
+		Vers:              VersionTLS13,
+		Random:            bytes.Repeat([]byte{0x55}, 32),
+		CipherSuite:       0x1301,
+		CompressionMethod: 0,
+		SelectedGroup:     CurveP256,
+	}
+
+	encoded, err := msg.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	var got ServerHelloMsg
+	if !got.Unmarshal(encoded) {
+		t.Fatal("Unmarshal() returned false")
+	}
+
+	if got.SelectedGroup != CurveP256 {
+		t.Fatalf("selected group = %v, want %v", got.SelectedGroup, CurveP256)
+	}
+}
+
+func TestServerKeyExchangeMarshalAndUnmarshal(t *testing.T) {
+	t.Run("marshal normal", func(t *testing.T) {
+		msg := &ServerKeyExchangeMsg{Key: []byte{0x01, 0x02, 0x03}}
+		encoded, err := msg.Marshal()
+		if err != nil {
+			t.Fatalf("Marshal() error = %v", err)
+		}
+
+		want := []byte{TypeServerKeyExchange, 0x00, 0x00, 0x03, 0x01, 0x02, 0x03}
+		if !bytes.Equal(encoded, want) {
+			t.Fatalf("Marshal() = %v, want %v", encoded, want)
+		}
+	})
+
+	t.Run("marshal too large", func(t *testing.T) {
+		msg := &ServerKeyExchangeMsg{Key: make([]byte, 0x1000000)}
+		if _, err := msg.Marshal(); err == nil {
+			t.Fatal("Marshal() expected error for oversized key")
+		}
+	})
+
+	t.Run("unmarshal", func(t *testing.T) {
+		msg := &ServerKeyExchangeMsg{}
+		if msg.Unmarshal([]byte{TypeServerKeyExchange, 0x00, 0x00}) {
+			t.Fatal("Unmarshal() expected false for short message")
+		}
+
+		if !msg.Unmarshal([]byte{TypeServerKeyExchange, 0x00, 0x00, 0x01, 0xAA}) {
+			t.Fatal("Unmarshal() expected true")
+		}
+
+		if !bytes.Equal(msg.Key, []byte{0xAA}) {
+			t.Fatalf("unexpected key bytes: %v", msg.Key)
+		}
+	})
 }
