@@ -15,7 +15,7 @@ This document describes how to run the unit and integration tests for the TLS Si
 Unit tests reside within their respective packages:
 
 - **Simulator Unit Tests** (`simulator/simulator_test.go`): Tests handshake orchestration (`PerformTLSHandshake`), ClientHello formatting, record construction, response parsing, message extraction, and network timeout handling.
-- **FTLS Message Tests** (`ftls/handshake_messages_test.go`): Tests marshaling and unmarshaling of TLS handshake messages (`ServerHello`, `Finished`, `ServerKeyExchange`).
+- **FTLS Message Tests** (`ftls/handshake_messages_test.go`): Tests marshaling and unmarshaling of TLS handshake messages (`ClientHello`, `ServerHello`, `Finished`, `ServerKeyExchange`), including extension-heavy and malformed-message cases.
 
 ### Integration Tests
 
@@ -83,6 +83,59 @@ Tests helper function checking `net.Error.Timeout()`.
 - **`net error with timeout false`**: Confirms `isTimeoutError` returns `false` for a mock `net.Error` with `Timeout() == false`.
 - **`standard non-net error`**: Confirms `isTimeoutError` returns `false` for standard Go `error` objects.
 
+## FTLS Package Unit Tests (`ftls/handshake_messages_test.go`)
+
+### `TestFinishedMsg`
+
+Tests `Finished` handshake message encoding/decoding for multiple verify-data sizes.
+
+- **`Empty verify data`**: Marshals/unmarshals a zero-length verify payload.
+- **`12-byte verify data (TLS 1.2)`**: Verifies classic TLS 1.2 `Finished` payload length.
+- **`32-byte verify data (TLS 1.3)`**: Verifies larger TLS 1.3-style verify payload length.
+
+### `TestServerHelloMsg` and `TestServerHelloMarshalUnmarshalWithExtensions`
+
+Tests both basic and extension-rich `ServerHello` marshal/unmarshal paths.
+
+- **Basic handshake cases**: Valid TLS 1.2 and TLS 1.3 messages plus malformed/truncated inputs.
+- **Extension-rich round trip**: OCSP, session ticket, renegotiation info, extended master secret, ALPN, SCT, supported versions, key share, pre-shared key identity, supported points, ECH payload, and SNI acknowledgment.
+- **`OriginalBytes` behavior**: Confirms unmarshaled message preserves original wire bytes.
+
+### `TestServerHelloUnmarshalHelloRetryRequestKeyShare`
+
+Tests HelloRetryRequest-compatible key_share parsing.
+
+- **Selected group format**: Verifies the 2-byte key_share format is accepted and parsed into `SelectedGroup`.
+
+### `TestClientHelloMarshalUnmarshalFull`
+
+Covers a comprehensive `ClientHello` round trip with most supported extensions enabled.
+
+- **Extensions covered**: SNI, status request, supported curves/points, session ticket, signature algorithms (+ cert), renegotiation info, extended master secret, ALPN, SCT, supported versions, cookie, key share, early data, PSK modes, pre-shared key identities/binders, QUIC transport parameters, and encrypted client hello payload.
+
+### `TestClientHelloMarshalMsgECHInner`
+
+Tests ECH-inner behavior of `ClientHello` marshaling.
+
+- **ECH outer extension list**: Verifies `ECHOuterExtensions` is emitted.
+- **Inner CH constraints**: Verifies direct extension placement and session-id behavior for ECH inner encoding.
+
+### `TestClientHelloUnmarshalRejectsInvalid`
+
+Tests strict validation on malformed `ClientHello` extension state.
+
+- **Trailing-dot SNI rejection**: Confirms hostnames ending with `.` are rejected.
+- **PSK ordering rule**: Confirms `pre_shared_key` must be the final extension.
+
+### `TestServerKeyExchangeMsgGetKey` and `TestServerKeyExchangeMarshalAndUnmarshal`
+
+Tests key extraction and wire-format processing for `ServerKeyExchange`.
+
+- **ECDHE key parsing**: X25519, P-256, and P-384 recognition.
+- **Finite-field DH parsing**: Known DH modulus sizes (e.g., 2048/3072) map to expected group labels.
+- **Error paths**: Unknown curve, invalid key lengths, and short messages.
+- **Marshal safeguards**: Verifies oversized key payloads are rejected.
+
 ## Running Tests
 
 ### Quick Start
@@ -129,6 +182,12 @@ make docker-down
 ```bash
 # Run simulator unit tests with coverage (writes coverage.out)
 go test -v -coverprofile=coverage.out ./simulator/...
+
+# Run FTLS message unit tests only
+go test -v ./ftls -run "Test(FinishedMsg|ServerHelloMsg|ServerHelloMarshalUnmarshalWithExtensions|ServerHelloUnmarshalHelloRetryRequestKeyShare|ClientHelloMarshalUnmarshalFull|ClientHelloMarshalMsgECHInner|ClientHelloUnmarshalRejectsInvalid|ServerKeyExchangeMsgGetKey|ServerKeyExchangeMarshalAndUnmarshal)$"
+
+# Run FTLS unit tests with per-file coverage report
+go test -v -coverprofile=coverage.out ./ftls && go tool cover -func=coverage.out | grep handshake_messages.go
 
 # Run all unit tests (exclude integration_tests, which requires -tags integration)
 go test -v $(go list ./... | grep -v "/integration_tests$")
