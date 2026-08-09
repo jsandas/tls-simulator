@@ -164,6 +164,8 @@ func TestPerformTLSHandshake(t *testing.T) {
 		defer l.Close()
 
 		go func() {
+			var combinedPayload []byte
+
 			conn, err := l.Accept()
 			if err != nil {
 				return
@@ -184,6 +186,8 @@ func TestPerformTLSHandshake(t *testing.T) {
 				return
 			}
 
+			combinedPayload = append(combinedPayload, shBytes...)
+
 			ske := &ftls.ServerKeyExchangeMsg{
 				Key: []byte{
 					0x03,       // named curve
@@ -200,7 +204,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 			}
 
 			// Combine ServerHello and ServerKeyExchange into a single record payload
-			combinedPayload := append(shBytes, skeBytes...)
+			combinedPayload = append(combinedPayload, skeBytes...)
 
 			record, err := createTLSRecord(combinedPayload)
 			if err != nil {
@@ -305,7 +309,8 @@ func TestBuildClientHello(t *testing.T) {
 		}
 
 		if len(ch.CipherSuites) != len(ftls.DefaultCipherSuitesTLS13) {
-			t.Errorf("expected TLS 1.3 default ciphers length %d, got %d", len(ftls.DefaultCipherSuitesTLS13), len(ch.CipherSuites))
+			t.Errorf("expected TLS 1.3 default ciphers length %d, got %d",
+				len(ftls.DefaultCipherSuitesTLS13), len(ch.CipherSuites))
 		}
 	})
 
