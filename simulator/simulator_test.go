@@ -1,6 +1,7 @@
 package simulator
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"net"
@@ -29,7 +30,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 
 	t.Run("connection refused", func(t *testing.T) {
 		// Listen and immediately close to get a free port that is guaranteed not accepting connections
-		l, err := net.Listen("tcp", "127.0.0.1:0")
+		l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 		if err != nil {
 			t.Fatalf("failed to listen: %v", err)
 		}
@@ -44,7 +45,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 	})
 
 	t.Run("valid TLS 1.2 handshake", func(t *testing.T) {
-		l, err := net.Listen("tcp", "127.0.0.1:0")
+		l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 		if err != nil {
 			t.Fatalf("failed to listen: %v", err)
 		}
@@ -96,7 +97,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 	})
 
 	t.Run("valid TLS 1.3 handshake", func(t *testing.T) {
-		l, err := net.Listen("tcp", "127.0.0.1:0")
+		l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 		if err != nil {
 			t.Fatalf("failed to listen: %v", err)
 		}
@@ -157,7 +158,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 	})
 
 	t.Run("handshake with server key exchange", func(t *testing.T) {
-		l, err := net.Listen("tcp", "127.0.0.1:0")
+		l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 		if err != nil {
 			t.Fatalf("failed to listen: %v", err)
 		}
@@ -227,7 +228,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 	})
 
 	t.Run("server sends invalid response", func(t *testing.T) {
-		l, err := net.Listen("tcp", "127.0.0.1:0")
+		l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 		if err != nil {
 			t.Fatalf("failed to listen: %v", err)
 		}
@@ -254,7 +255,7 @@ func TestPerformTLSHandshake(t *testing.T) {
 	})
 
 	t.Run("server sends no data timeout", func(t *testing.T) {
-		l, err := net.Listen("tcp", "127.0.0.1:0")
+		l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 		if err != nil {
 			t.Fatalf("failed to listen: %v", err)
 		}
