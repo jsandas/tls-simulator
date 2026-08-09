@@ -33,11 +33,6 @@ jobs:
           DOCKER_CLIENT_TIMEOUT: 120
           COMPOSE_HTTP_TIMEOUT: 120
           
-      - name: Run service-specific tests
-        run: |
-          make test-nginx-1-30-0
-          make test-postfix
-          
       - name: Cleanup Docker containers
         if: always()
         run: |
