@@ -1,4 +1,6 @@
-package main
+//go:build integration
+
+package integrationtests
 
 import (
 	"context"
@@ -8,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jsandas/tls-simulator/ftls"
+	"github.com/jsandas/tls-simulator/simulator"
 )
 
 // TestConfig holds configuration for integration tests.
@@ -22,7 +25,7 @@ type TestConfig struct {
 // DefaultTestConfig returns a default test configuration.
 func DefaultTestConfig() TestConfig {
 	return TestConfig{
-		ServerAddr: "localhost:443",
+		ServerAddr: "127.0.0.1:443",
 		Protocol:   tls.VersionTLS12,
 		Ciphers:    []uint16{},
 		Curves:     []ftls.CurveID{ftls.X25519, ftls.CurveP256},
@@ -33,14 +36,19 @@ func DefaultTestConfig() TestConfig {
 // WaitForServer waits for the server to be ready.
 func WaitForServer(addr string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	const attemptTimeout = 2 * time.Second
 
 	for time.Now().Before(deadline) {
+		dialTimeout := attemptTimeout
+		if remaining := time.Until(deadline); remaining < dialTimeout {
+			dialTimeout = remaining
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 		dialer := &net.Dialer{}
 
 		conn, err := dialer.DialContext(ctx, "tcp", addr)
+		cancel()
 		if err == nil {
 			cerr := conn.Close()
 			if cerr != nil {
@@ -57,7 +65,7 @@ func WaitForServer(addr string, timeout time.Duration) error {
 }
 
 // ValidateTLSResult validates the basic structure of a TLS handshake result.
-func ValidateTLSResult(result *TLSHandshakeResult, expectedProtocol uint16) error {
+func ValidateTLSResult(result *simulator.TLSHandshakeResult, expectedProtocol uint16) error {
 	if result == nil {
 		return fmt.Errorf("result is nil")
 	}
@@ -78,7 +86,7 @@ func ValidateTLSResult(result *TLSHandshakeResult, expectedProtocol uint16) erro
 }
 
 // ValidateCurve validates that the negotiated curve is one of the offered curves.
-func ValidateCurve(result *TLSHandshakeResult, offeredCurves []ftls.CurveID) error {
+func ValidateCurve(result *simulator.TLSHandshakeResult, offeredCurves []ftls.CurveID) error {
 	if result.CurveID == 0 {
 		return fmt.Errorf("no curve negotiated")
 	}
@@ -93,7 +101,7 @@ func ValidateCurve(result *TLSHandshakeResult, offeredCurves []ftls.CurveID) err
 }
 
 // ValidateCipher validates that the negotiated cipher is one of the offered ciphers.
-func ValidateCipher(result *TLSHandshakeResult, offeredCiphers []uint16) error {
+func ValidateCipher(result *simulator.TLSHandshakeResult, offeredCiphers []uint16) error {
 	for _, cipher := range offeredCiphers {
 		if result.Cipher == cipher {
 			return nil
@@ -104,7 +112,7 @@ func ValidateCipher(result *TLSHandshakeResult, offeredCiphers []uint16) error {
 }
 
 // ValidateTLS13Cipher validates that the negotiated cipher is a valid TLS 1.3 cipher.
-func ValidateTLS13Cipher(result *TLSHandshakeResult) error {
+func ValidateTLS13Cipher(result *simulator.TLSHandshakeResult) error {
 	validTLS13Ciphers := map[uint16]bool{
 		tls.TLS_AES_128_GCM_SHA256:       true,
 		tls.TLS_AES_256_GCM_SHA384:       true,

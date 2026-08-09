@@ -1,4 +1,4 @@
-package main
+package simulator
 
 import (
 	"context"
@@ -32,6 +32,8 @@ func buildClientHello(protocolVer uint16, ciphers []uint16,
 		CompressionMethods: []uint8{ftls.CompressionNone},
 		ServerName:         sniHost,
 		SessionId:          []byte{},
+		// Intentionally fixed for deterministic simulator output and stable fingerprints
+		// across test runs. This is not used as cryptographic randomness.
 		Random: []byte{0x3a, 0x6e, 0x72, 0xcc, 0xf9, 0x3b, 0x29, 0xbb, 0xfb, 0x2d, 0xd0, 0xa3,
 			0x2b, 0x76, 0x3a, 0x9d, 0x28, 0x89, 0x11, 0xae, 0xfe, 0x4f, 0xf, 0x37, 0x6d,
 			0xce, 0xa0, 0x4a, 0xf, 0x8d, 0x6e, 0x15},
@@ -43,6 +45,7 @@ func buildClientHello(protocolVer uint16, ciphers []uint16,
 			ftls.PKCS1WithSHA256, ftls.PSSWithSHA256, ftls.ECDSAWithP256AndSHA256,
 			ftls.PKCS1WithSHA1, ftls.ECDSAWithSHA1,
 		},
+		// Intentionally fixed key share for deterministic handshake simulation.
 		KeyShares: []ftls.KeyShare{{
 			Group: ftls.X25519,
 			Data: []byte{0xed, 0x7, 0xea, 0x17, 0xf2, 0x33, 0x83, 0x69, 0x5, 0x94, 0x89,
@@ -181,8 +184,6 @@ func sendClientHello(addr string, clientHello []byte) ([]byte, error) {
 	}
 
 	// Attempt STARTTLS if needed for this port
-	ctx = context.Background()
-
 	err = starttls.StartTLS(ctx, conn, port)
 	if err != nil {
 		return nil, fmt.Errorf("STARTTLS negotiation failed: %v", err)

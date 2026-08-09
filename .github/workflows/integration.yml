@@ -20,10 +20,10 @@ jobs:
           go-version-file: "go.mod"
           cache: true
 
+      # Building isn't strictly necessary for running the integration tests, but
+      # it ensures that the code compiles before bringing up the Docker containers.
       - name: Build the application
-        run: |
-          go mod download
-          go build -v .
+        run: go build -o tls-simulator ./examples
           
       - name: Run integration tests
         run: |
@@ -32,11 +32,6 @@ jobs:
           # Increase timeout for CI environment
           DOCKER_CLIENT_TIMEOUT: 120
           COMPOSE_HTTP_TIMEOUT: 120
-          
-      - name: Run specific TLS 1.3 tests
-        run: |
-          make test-tls13-chacha20
-          make test-tls13-default
           
       - name: Cleanup Docker containers
         if: always()
