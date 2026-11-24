@@ -73,17 +73,20 @@ const (
 type CurveID uint16
 
 const (
-	CurveP256      CurveID = 23
-	CurveP384      CurveID = 24
-	CurveP521      CurveID = 25
-	X25519         CurveID = 29
-	DH1024         CurveID = 255 // 1024-bit not in RFC 7919
-	DH2048         CurveID = 256 // 2048-bit ffdhe2048, RFC 7919
-	DH3072         CurveID = 257 // 3072-bit ffdhe3072, RFC 7919
-	DH4096         CurveID = 258 // 4096-bit ffdhe4096, RFC 7919
-	DH6144         CurveID = 259 // 6144-bit ffdhe6144, RFC 7919
-	DH8192         CurveID = 260 // 8192-bit ffdhe8192, RFC 7919
-	X25519MLKEM768 CurveID = 4588
+	CurveP256          CurveID = 23
+	CurveP384          CurveID = 24
+	CurveP521          CurveID = 25
+	X25519             CurveID = 29
+	DH1024             CurveID = 255 // 1024-bit not in RFC 7919
+	DH2048             CurveID = 256 // 2048-bit ffdhe2048, RFC 7919
+	DH3072             CurveID = 257 // 3072-bit ffdhe3072, RFC 7919
+	DH4096             CurveID = 258 // 4096-bit ffdhe4096, RFC 7919
+	DH6144             CurveID = 259 // 6144-bit ffdhe6144, RFC 7919
+	DH8192             CurveID = 260 // 8192-bit ffdhe8192, RFC 7919
+	X25519MLKEM768     CurveID = 4588
+	SecP256r1MLKEM768  CurveID = 4587
+	SecP384r1MLKEM1024 CurveID = 4589
+	MLKEM1024          CurveID = 514
 )
 
 // TLS 1.3 Key Share. See RFC 8446, Section 4.2.8.
@@ -141,6 +144,11 @@ const (
 
 	// EdDSA algorithms.
 	Ed25519 SignatureScheme = 0x0807
+
+	// ML-DSA algorithms.
+	MLDSA44 SignatureScheme = 0x0904
+	MLDSA65 SignatureScheme = 0x0905
+	MLDSA87 SignatureScheme = 0x0906
 
 	// Legacy signature and hash algorithms for TLS 1.2.
 	PKCS1WithSHA1 SignatureScheme = 0x0201
