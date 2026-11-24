@@ -518,7 +518,7 @@ func TestClientHelloMarshalUnmarshalFull(t *testing.T) {
 	}
 
 	if len(got.PskIdentities) != 1 || len(got.PskBinders) != 1 {
-		t.Fatalf("expected one PSK identity and binder")
+		t.Fatalf("expected one PSK identity and binder, got %d and %d", len(got.PskIdentities), len(got.PskBinders))
 	}
 
 	if !hasExt(got.Extensions, ExtensionPreSharedKey) {
