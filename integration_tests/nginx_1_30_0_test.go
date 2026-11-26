@@ -277,3 +277,74 @@ func TestNginx1300_TLS10To13(t *testing.T) {
 		}
 	})
 }
+
+// TestNginx1300_TLS13_PQCOnly_MLKEM tests TLS 1.3 PQC group negotiation against the dedicated PQC service.
+func TestNginx1300_TLS13_PQCOnly_MLKEM(t *testing.T) {
+	var ciphers []uint16
+	curves := []ftls.CurveID{
+		ftls.X25519MLKEM768,
+	}
+
+	result, err := simulator.PerformTLSHandshake(
+		tls.VersionTLS13,
+		ciphers,
+		curves,
+		Nginx1300_PQC_Addr,
+	)
+	if err != nil {
+		t.Fatalf("TLS 1.3 PQC-only handshake failed: %v", err)
+	}
+
+	if err := ValidateTLSResult(result, tls.VersionTLS13); err != nil {
+		t.Fatalf("Invalid TLS result: %v", err)
+	}
+
+	if result.CurveID != ftls.X25519MLKEM768 {
+		t.Fatalf("expected negotiated curve %s, got %s", GetCurveName(ftls.X25519MLKEM768), GetCurveName(result.CurveID))
+	}
+}
+
+// TestNginx1300_TLS13_PQCFallback_X25519 tests fallback negotiation when PQC and classical groups are both offered.
+func TestNginx1300_TLS13_PQCFallback_X25519(t *testing.T) {
+	var ciphers []uint16
+	curves := []ftls.CurveID{
+		ftls.X25519MLKEM768,
+		ftls.X25519,
+	}
+
+	result, err := simulator.PerformTLSHandshake(
+		tls.VersionTLS13,
+		ciphers,
+		curves,
+		Nginx1300_PQC_Addr,
+	)
+	if err != nil {
+		t.Fatalf("TLS 1.3 PQC fallback handshake failed: %v", err)
+	}
+
+	if err := ValidateTLSResult(result, tls.VersionTLS13); err != nil {
+		t.Fatalf("Invalid TLS result: %v", err)
+	}
+
+	if err := ValidateCurve(result, curves); err != nil {
+		t.Fatalf("Curve validation failed: %v", err)
+	}
+}
+
+// TestNginx1300_TLS13_PQCOnlyRejected_NonPQCService verifies a PQC-only offer is rejected by a non-PQC group config.
+func TestNginx1300_TLS13_PQCOnlyRejected_NonPQCService(t *testing.T) {
+	var ciphers []uint16
+	curves := []ftls.CurveID{
+		ftls.X25519MLKEM768,
+	}
+
+	_, err := simulator.PerformTLSHandshake(
+		tls.VersionTLS13,
+		ciphers,
+		curves,
+		Nginx1300_TLS10_TLS13_Addr,
+	)
+	if err == nil {
+		t.Fatal("expected TLS 1.3 handshake failure for PQC-only curves against non-PQC service, but handshake succeeded")
+	}
+}

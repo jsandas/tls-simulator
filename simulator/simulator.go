@@ -71,8 +71,8 @@ func deterministicX25519MLKEM768KeyShare() (ftls.KeyShare, error) {
 		return ftls.KeyShare{}, fmt.Errorf("failed to create deterministic ML-KEM-768 decapsulation key: %w", err)
 	}
 
-	keyShareData := append([]byte{}, x25519PrivateKey.PublicKey().Bytes()...)
-	keyShareData = append(keyShareData, mlkemDecapsulationKey.EncapsulationKey().Bytes()...)
+	keyShareData := append([]byte{}, mlkemDecapsulationKey.EncapsulationKey().Bytes()...)
+	keyShareData = append(keyShareData, x25519PrivateKey.PublicKey().Bytes()...)
 
 	return ftls.KeyShare{
 		Group: ftls.X25519MLKEM768,
