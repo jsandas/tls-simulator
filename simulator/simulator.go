@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jsandas/starttls-go/starttls"
+
 	"github.com/jsandas/tls-simulator/ftls"
 )
 
