@@ -237,7 +237,7 @@ const (
 	// that the client is doing version fallback. See RFC 7507.
 	TLS_FALLBACK_SCSV uint16 = 0x5600
 
-	TLS_EMPTY_RENEGOTIATION_INFO_SCSV uint16 = 0x00ff
+	TLS_EMPTY_RENEGOTIATION_INFO_SCSV uint16 = scsvRenegotiation
 
 	// Legacy names for the corresponding cipher suites with the correct _SHA256
 	// suffix, retained for backward compatibility.
