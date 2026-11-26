@@ -1,56 +1,40 @@
 version: "2"
-linters:
-  default: none
+
+formatters:
   enable:
-    - asciicheck
-    - contextcheck
-    - dupl
-    - embeddedstructfieldcheck
-    - errcheck
-    - funcorder
-    - goconst
-    - gocritic
-    - gocyclo
-    - godot
-    - goheader
-    - goprintffuncname
-    - gosec
-    - govet
-    - ineffassign
-    - lll
-    - misspell
-    - nakedret
-    - noctx
-    - noinlineerr
-    - nolintlint
-    - rowserrcheck
-    - staticcheck
-    - unconvert
-    - unparam
-    - unused
-    - whitespace
-    - wsl_v5
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
-    rules:
-      # Exclude some linters from running on tests files.
-      - path: _test\.go
-        linters:
-          - gocyclo
-          - errcheck
-          - dupl
-          - gosec
+    - goimports
   settings:
-    dupl:
-      threshold: 100
-    gocyclo:
-      min-complexity: 14
+    goimports:
+      local-prefixes:
+        - github.com/jsandas/tls-simulator
+
+linters:
+  enable:
+    - errcheck      # Check for unchecked errors
+    - govet         # Examine Go source code
+    - ineffassign   # Detect ineffectual assignments
+    - staticcheck   # Advanced static analysis
+    - unused        # Find unused code
+    - gosec         # Security-focused checks
+    - revive        # Fast, configurable linter
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+
+  exclusions:
+    presets:
+      - std-error-handling
+      - common-false-positives
+    rules:
+      - source: 'TODO'
+        linters: [ godot ]
+      - path: '_test\.go'
+        linters:
+          - errcheck
+          - gosec
