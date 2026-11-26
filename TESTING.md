@@ -49,6 +49,8 @@ Tests construction of `ftls.ClientHelloMsg` with default and custom parameters.
 - **`TLS 1.2 defaults`**: Ensures default TLS 1.2 ciphers and curves are populated when empty slices are passed.
 - **`TLS 1.3 defaults`**: Ensures `SupportedVersions` array and TLS 1.3 default ciphers are populated for TLS 1.3.
 - **`custom ciphers and curves`**: Confirms custom cipher suite slices and curve ID lists override defaults.
+- **`PQC-only curves use ML-KEM key share`**: Ensures a PQC-only curve list selects the `X25519MLKEM768` key share and expected payload size.
+- **`ClientHello includes ML-DSA signature schemes`**: Verifies ML-DSA signature scheme codepoints are advertised in `SupportedSignatureAlgorithms`.
 
 ### `TestCreateTLSRecord`
 
