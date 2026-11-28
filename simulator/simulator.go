@@ -113,11 +113,11 @@ func buildClientHello(protocolVer uint16, ciphers []uint16,
 		SupportedPoints: []uint8{ftls.PointFormatUncompressed},
 		SupportedCurves: curves,
 		SupportedSignatureAlgorithms: []ftls.SignatureScheme{
+			ftls.MLDSA44, ftls.MLDSA65, ftls.MLDSA87,
 			ftls.PSSWithSHA512, ftls.PKCS1WithSHA512, ftls.ECDSAWithP521AndSHA512,
 			ftls.PSSWithSHA384, ftls.PKCS1WithSHA384, ftls.ECDSAWithP384AndSHA384,
 			ftls.PKCS1WithSHA256, ftls.PSSWithSHA256, ftls.ECDSAWithP256AndSHA256,
-			ftls.PKCS1WithSHA1, ftls.ECDSAWithSHA1, ftls.MLDSA44,
-			ftls.MLDSA65, ftls.MLDSA87,
+			ftls.PKCS1WithSHA1, ftls.ECDSAWithSHA1,
 		},
 		AlpnProtocols: []string{"h2", "http/1.1"},
 	}
