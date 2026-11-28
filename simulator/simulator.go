@@ -2,6 +2,8 @@ package simulator
 
 import (
 	"context"
+	"crypto/ecdh"
+	"crypto/mlkem"
 	"crypto/tls"
 	"encoding/binary"
 	"fmt"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jsandas/starttls-go/starttls"
+
 	"github.com/jsandas/tls-simulator/ftls"
 )
 
@@ -23,9 +26,79 @@ type TLSHandshakeResult struct {
 	Error   error
 }
 
+var (
+	deterministicX25519KeyShareData = []byte{
+		0xed, 0x7, 0xea, 0x17, 0xf2, 0x33, 0x83, 0x69, 0x5, 0x94, 0x89,
+		0xc7, 0x9f, 0x57, 0x19, 0xcd, 0x6b, 0xcb, 0xe7, 0x22, 0x3d, 0xb1, 0x1b,
+		0x8b, 0xe1, 0x52, 0x1d, 0xc2, 0x49, 0x48, 0xe4, 0x3d,
+	}
+	deterministicX25519PrivateKey = []byte{
+		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+		0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+		0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+		0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+	}
+	deterministicMLKEMSeed = []byte{
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+		0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+		0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+		0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+		0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+		0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+		0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+		0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+	}
+)
+
+func hasCurve(curves []ftls.CurveID, curve ftls.CurveID) bool {
+	for _, c := range curves {
+		if c == curve {
+			return true
+		}
+	}
+
+	return false
+}
+
+func deterministicX25519MLKEM768KeyShare() (ftls.KeyShare, error) {
+	x25519PrivateKey, err := ecdh.X25519().NewPrivateKey(deterministicX25519PrivateKey)
+	if err != nil {
+		return ftls.KeyShare{}, fmt.Errorf("failed to create deterministic X25519 private key: %w", err)
+	}
+
+	mlkemDecapsulationKey, err := mlkem.NewDecapsulationKey768(deterministicMLKEMSeed)
+	if err != nil {
+		return ftls.KeyShare{}, fmt.Errorf("failed to create deterministic ML-KEM-768 decapsulation key: %w", err)
+	}
+
+	keyShareData := append([]byte{}, mlkemDecapsulationKey.EncapsulationKey().Bytes()...)
+	keyShareData = append(keyShareData, x25519PrivateKey.PublicKey().Bytes()...)
+
+	return ftls.KeyShare{
+		Group: ftls.X25519MLKEM768,
+		Data:  keyShareData,
+	}, nil
+}
+
+func buildKeyShares(curves []ftls.CurveID) ([]ftls.KeyShare, error) {
+	if hasCurve(curves, ftls.X25519MLKEM768) && !hasCurve(curves, ftls.X25519) {
+		mlkemKeyShare, err := deterministicX25519MLKEM768KeyShare()
+		if err != nil {
+			return nil, err
+		}
+
+		return []ftls.KeyShare{mlkemKeyShare}, nil
+	}
+
+	return []ftls.KeyShare{{
+		Group: ftls.X25519,
+		Data:  deterministicX25519KeyShareData,
+	}}, nil
+}
+
 // buildClientHello creates a ClientHelloMsg with the specified parameters.
 func buildClientHello(protocolVer uint16, ciphers []uint16,
-	curves []ftls.CurveID, sniHost string) *ftls.ClientHelloMsg {
+	curves []ftls.CurveID, sniHost string) (*ftls.ClientHelloMsg, error) {
 	clientMsg := &ftls.ClientHelloMsg{
 		Vers:               protocolVer,
 		CipherSuites:       ciphers,
@@ -40,18 +113,12 @@ func buildClientHello(protocolVer uint16, ciphers []uint16,
 		SupportedPoints: []uint8{ftls.PointFormatUncompressed},
 		SupportedCurves: curves,
 		SupportedSignatureAlgorithms: []ftls.SignatureScheme{
+			ftls.MLDSA44, ftls.MLDSA65, ftls.MLDSA87,
 			ftls.PSSWithSHA512, ftls.PKCS1WithSHA512, ftls.ECDSAWithP521AndSHA512,
 			ftls.PSSWithSHA384, ftls.PKCS1WithSHA384, ftls.ECDSAWithP384AndSHA384,
 			ftls.PKCS1WithSHA256, ftls.PSSWithSHA256, ftls.ECDSAWithP256AndSHA256,
 			ftls.PKCS1WithSHA1, ftls.ECDSAWithSHA1,
 		},
-		// Intentionally fixed key share for deterministic handshake simulation.
-		KeyShares: []ftls.KeyShare{{
-			Group: ftls.X25519,
-			Data: []byte{0xed, 0x7, 0xea, 0x17, 0xf2, 0x33, 0x83, 0x69, 0x5, 0x94, 0x89,
-				0xc7, 0x9f, 0x57, 0x19, 0xcd, 0x6b, 0xcb, 0xe7, 0x22, 0x3d, 0xb1, 0x1b,
-				0x8b, 0xe1, 0x52, 0x1d, 0xc2, 0x49, 0x48, 0xe4, 0x3d},
-		}},
 		AlpnProtocols: []string{"h2", "http/1.1"},
 	}
 
@@ -68,7 +135,14 @@ func buildClientHello(protocolVer uint16, ciphers []uint16,
 		clientMsg.SupportedCurves = ftls.DefaultCurves
 	}
 
-	return clientMsg
+	keyShares, err := buildKeyShares(clientMsg.SupportedCurves)
+	if err != nil {
+		return nil, err
+	}
+
+	clientMsg.KeyShares = keyShares
+
+	return clientMsg, nil
 }
 
 // createTLSRecord wraps a handshake message in a TLS record.
@@ -140,7 +214,10 @@ func PerformTLSHandshake(protocolVer uint16, ciphers []uint16,
 		return nil, fmt.Errorf("invalid server address: %v", err)
 	}
 
-	clientMsg := buildClientHello(protocolVer, ciphers, curves, sniHost)
+	clientMsg, err := buildClientHello(protocolVer, ciphers, curves, sniHost)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build ClientHello: %v", err)
+	}
 
 	clientHello, err := clientMsg.MarshalMsg(false)
 	if err != nil {

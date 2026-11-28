@@ -2,6 +2,7 @@ package simulator
 
 import (
 	"context"
+	"crypto/mlkem"
 	"crypto/tls"
 	"errors"
 	"net"
@@ -288,7 +289,10 @@ func TestPerformTLSHandshake(t *testing.T) {
 
 func TestBuildClientHello(t *testing.T) {
 	t.Run("TLS 1.2 defaults", func(t *testing.T) {
-		ch := buildClientHello(tls.VersionTLS12, nil, nil, "example.com")
+		ch, err := buildClientHello(tls.VersionTLS12, nil, nil, "example.com")
+		if err != nil {
+			t.Fatalf("unexpected error building ClientHello: %v", err)
+		}
 
 		if ch.Vers != tls.VersionTLS12 {
 			t.Errorf("expected version %d, got %d", tls.VersionTLS12, ch.Vers)
@@ -308,7 +312,10 @@ func TestBuildClientHello(t *testing.T) {
 	})
 
 	t.Run("TLS 1.3 defaults", func(t *testing.T) {
-		ch := buildClientHello(tls.VersionTLS13, nil, nil, "example.com")
+		ch, err := buildClientHello(tls.VersionTLS13, nil, nil, "example.com")
+		if err != nil {
+			t.Fatalf("unexpected error building ClientHello: %v", err)
+		}
 
 		if len(ch.SupportedVersions) != 1 || ch.SupportedVersions[0] != tls.VersionTLS13 {
 			t.Errorf("expected supported versions [1304], got %v", ch.SupportedVersions)
@@ -323,7 +330,10 @@ func TestBuildClientHello(t *testing.T) {
 	t.Run("custom ciphers and curves", func(t *testing.T) {
 		ciphers := []uint16{0xc02f, 0xc030}
 		curves := []ftls.CurveID{ftls.X25519}
-		ch := buildClientHello(tls.VersionTLS12, ciphers, curves, "custom.test")
+		ch, err := buildClientHello(tls.VersionTLS12, ciphers, curves, "custom.test")
+		if err != nil {
+			t.Fatalf("unexpected error building ClientHello: %v", err)
+		}
 
 		if len(ch.CipherSuites) != 2 || ch.CipherSuites[0] != 0xc02f {
 			t.Errorf("unexpected cipher suites: %v", ch.CipherSuites)
@@ -331,6 +341,50 @@ func TestBuildClientHello(t *testing.T) {
 
 		if len(ch.SupportedCurves) != 1 || ch.SupportedCurves[0] != ftls.X25519 {
 			t.Errorf("unexpected curves: %v", ch.SupportedCurves)
+		}
+	})
+
+	t.Run("PQC-only curves use ML-KEM key share", func(t *testing.T) {
+		ch, err := buildClientHello(tls.VersionTLS13, nil, []ftls.CurveID{ftls.X25519MLKEM768}, "pqc.test")
+		if err != nil {
+			t.Fatalf("unexpected error building ClientHello: %v", err)
+		}
+
+		if len(ch.KeyShares) != 1 {
+			t.Fatalf("expected exactly one key share, got %d", len(ch.KeyShares))
+		}
+
+		if ch.KeyShares[0].Group != ftls.X25519MLKEM768 {
+			t.Fatalf("expected key share group %v, got %v", ftls.X25519MLKEM768, ch.KeyShares[0].Group)
+		}
+
+		if got, want := len(ch.KeyShares[0].Data), 32+mlkem.EncapsulationKeySize768; got != want {
+			t.Fatalf("unexpected key share length: got %d, want %d", got, want)
+		}
+	})
+
+	t.Run("ClientHello includes ML-DSA signature schemes", func(t *testing.T) {
+		ch, err := buildClientHello(tls.VersionTLS13, nil, nil, "sig.test")
+		if err != nil {
+			t.Fatalf("unexpected error building ClientHello: %v", err)
+		}
+
+		hasMLDSA44 := false
+		hasMLDSA65 := false
+		hasMLDSA87 := false
+		for _, sig := range ch.SupportedSignatureAlgorithms {
+			switch sig {
+			case ftls.MLDSA44:
+				hasMLDSA44 = true
+			case ftls.MLDSA65:
+				hasMLDSA65 = true
+			case ftls.MLDSA87:
+				hasMLDSA87 = true
+			}
+		}
+
+		if !hasMLDSA44 || !hasMLDSA65 || !hasMLDSA87 {
+			t.Fatalf("expected ML-DSA signature schemes in ClientHello, got %v", ch.SupportedSignatureAlgorithms)
 		}
 	})
 }

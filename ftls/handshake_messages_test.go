@@ -487,7 +487,7 @@ func TestClientHelloMarshalUnmarshalFull(t *testing.T) {
 		PskIdentities:           []PskIdentity{{Label: []byte("psk-id"), ObfuscatedTicketAge: 7}},
 		PskBinders:              [][]byte{{0x01, 0x02, 0x03}},
 		QuicTransportParameters: []byte{},
-		EncryptedClientHello:    []byte{0xEE, 0xCC},
+		EncryptedClientHello:    []byte{byte(innerECHExt)}, // ECH with the inner marker, PSK is allowed
 	}
 
 	encoded, err := msg.MarshalMsg(false)
@@ -518,7 +518,7 @@ func TestClientHelloMarshalUnmarshalFull(t *testing.T) {
 	}
 
 	if len(got.PskIdentities) != 1 || len(got.PskBinders) != 1 {
-		t.Fatalf("expected one PSK identity and binder")
+		t.Fatalf("expected one PSK identity and binder, got %d and %d", len(got.PskIdentities), len(got.PskBinders))
 	}
 
 	if !hasExt(got.Extensions, ExtensionPreSharedKey) {

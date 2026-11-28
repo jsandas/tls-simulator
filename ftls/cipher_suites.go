@@ -1,7 +1,3 @@
-// Copyright 2010 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package ftls
 
 var DefaultCipherSuites = []uint16{
@@ -222,6 +218,9 @@ const (
 	TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256_OLD     uint16 = 0xcc15 // draft version of ChaCha ciphers
 	TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256       uint16 = 0xcca8
 	TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256     uint16 = 0xcca9
+	TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256         uint16 = 0xccaa
+	TLS_GOSTR341112_256_WITH_KUZNYECHIK_CTR_OMAC      uint16 = 0xff85
+	TLS_GOSTR341001_WITH_28147_CNT_IMIT               uint16 = 0x0081
 
 	// TLS 1.3 cipher suites.
 	TLS_AES_128_GCM_SHA256       uint16 = 0x1301
@@ -233,6 +232,8 @@ const (
 	// TLS_FALLBACK_SCSV isn't a standard cipher suite but an indicator
 	// that the client is doing version fallback. See RFC 7507.
 	TLS_FALLBACK_SCSV uint16 = 0x5600
+
+	TLS_EMPTY_RENEGOTIATION_INFO_SCSV uint16 = scsvRenegotiation
 
 	// Legacy names for the corresponding cipher suites with the correct _SHA256
 	// suffix, retained for backward compatibility.

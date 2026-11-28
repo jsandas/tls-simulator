@@ -26,6 +26,15 @@ services:
     volumes:
       - ./nginx/1.30.0/tls10+/default.conf:/etc/nginx/conf.d/default.conf:ro
 
+  # nginx 1.30.0 + OpenSSL 3.5.7 (patched) — dedicated PQC group tests
+  # Generates an ML-DSA certificate at container startup, then launches nginx.
+  nginx_1.30.0_pqc:
+    image: ghcr.io/jsandas/nginx-1.30.0_openssl-3.5.7
+    ports:
+      - "6443:443"
+    volumes:
+      - ./nginx/1.30.0/pqc/default.conf:/etc/nginx/conf.d/default.conf:ro
+
   # nginx 1.2.9 + OpenSSL 1.0.1f (vulnerable) — TLS 1.2 only
   # Mount to /usr/local/nginx/conf/nginx.conf — the path this image's nginx reads from.
   nginx_1.2.9_tls12:

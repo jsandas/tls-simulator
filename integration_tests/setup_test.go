@@ -15,6 +15,7 @@ const (
 	Nginx1300_TLS12_TLS13_Addr = "127.0.0.1:443"
 	Nginx1300_TLS12_Addr       = "127.0.0.1:1443"
 	Nginx1300_TLS10_TLS13_Addr = "127.0.0.1:2443"
+	Nginx1300_PQC_Addr         = "127.0.0.1:6443"
 	Nginx129_TLS12_Addr        = "127.0.0.1:3443"
 	Nginx129_TLS10_TLS12_Addr  = "127.0.0.1:4443"
 	Nginx129_SSLv2_TLS12_Addr  = "127.0.0.1:5443"
@@ -27,6 +28,7 @@ var allAddrs = []string{
 	Nginx1300_TLS12_TLS13_Addr,
 	Nginx1300_TLS12_Addr,
 	Nginx1300_TLS10_TLS13_Addr,
+	Nginx1300_PQC_Addr,
 	Nginx129_TLS12_Addr,
 	Nginx129_TLS10_TLS12_Addr,
 	Nginx129_SSLv2_TLS12_Addr,

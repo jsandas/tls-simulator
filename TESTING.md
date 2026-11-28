@@ -22,7 +22,7 @@ Unit tests reside within their respective packages:
 The integration tests reside in the `integration_tests/` directory:
 
 - **Setup & Teardown** (`setup_test.go`): Manages starting and stopping docker compose containers and waiting for service health
-- **Nginx 1.30.0 Tests** (`nginx_1_30_0_test.go`): Tests TLS 1.3/1.2 negotiation, ciphers, curves, and version constraints across Nginx 1.30.0 containers
+- **Nginx 1.30.0 Tests** (`nginx_1_30_0_test.go`): Tests TLS 1.3/1.2 negotiation, ciphers, curves, version constraints, and dedicated PQC group scenarios across Nginx 1.30.0 containers
 - **Nginx 1.2.9 Tests** (`nginx_1_2_9_test.go`): Tests legacy TLS 1.0–1.2 and SSLv2 configurations on Nginx 1.2.9 with OpenSSL 1.0.1f
 - **Postfix STARTTLS Tests** (`postfix_test.go`): Tests SMTP STARTTLS negotiation on ports 25 and 587
 - **MariaDB TLS Tests** (`mariadb_test.go`): Tests MySQL/MariaDB TLS connection on port 3306
@@ -49,6 +49,8 @@ Tests construction of `ftls.ClientHelloMsg` with default and custom parameters.
 - **`TLS 1.2 defaults`**: Ensures default TLS 1.2 ciphers and curves are populated when empty slices are passed.
 - **`TLS 1.3 defaults`**: Ensures `SupportedVersions` array and TLS 1.3 default ciphers are populated for TLS 1.3.
 - **`custom ciphers and curves`**: Confirms custom cipher suite slices and curve ID lists override defaults.
+- **`PQC-only curves use ML-KEM key share`**: Ensures a PQC-only curve list selects the `X25519MLKEM768` key share and expected payload size.
+- **`ClientHello includes ML-DSA signature schemes`**: Verifies ML-DSA signature scheme codepoints are advertised in `SupportedSignatureAlgorithms`.
 
 ### `TestCreateTLSRecord`
 
@@ -206,6 +208,7 @@ Tests use containers defined in `integration_tests/docker-compose.yml`:
 - **nginx_1.30.0_tls12-tls13**: `127.0.0.1:443` - TLS 1.2 + TLS 1.3
 - **nginx_1.30.0_tls12**: `127.0.0.1:1443` - TLS 1.2 only
 - **nginx_1.30.0_tls10-tls13**: `127.0.0.1:2443` - TLS 1.0 through TLS 1.3
+- **nginx_1.30.0_pqc**: `127.0.0.1:6443` - TLS 1.3 PQC-focused groups (`X25519MLKEM768:X25519`) with startup ML-DSA certificate generation
 - **nginx_1.2.9_tls12**: `127.0.0.1:3443` - TLS 1.2 with OpenSSL 1.0.1f
 - **nginx_1.2.9_tls10-tls12**: `127.0.0.1:4443` - TLS 1.0 through TLS 1.2
 - **nginx_1.2.9_sslv2-tls12**: `127.0.0.1:5443` - SSLv2 through TLS 1.2
